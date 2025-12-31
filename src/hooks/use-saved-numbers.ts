@@ -1,86 +1,134 @@
 import { useState, useEffect, useCallback } from "react";
 import { SavedNumber } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
+import { supabase } from "@/integrations/supabase/client";
+import useAuth from "./use-auth";
 
-const MOCK_SAVED_NUMBERS: SavedNumber[] = [
-  { id: "1", name: "Messagerie Vocale", number: "123" },
-  { id: "2", name: "Standard Accueil", number: "0033140000000" },
-  { id: "3", name: "Mobile Urgence", number: "0699887766" },
-];
-
-const STORAGE_KEY = "dyad_saved_numbers";
+// Type pour les données Supabase (inclut user_id)
+interface SavedNumberDB {
+  id: string;
+  name: string;
+  number: string;
+  user_id: string;
+}
 
 const useSavedNumbers = () => {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [savedNumbers, setSavedNumbers] = useState<SavedNumber[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simuler le chargement depuis le stockage local
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setSavedNumbers(JSON.parse(stored));
-      } else {
-        // Initialiser avec les mocks si rien n'est trouvé
-        setSavedNumbers(MOCK_SAVED_NUMBERS);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_SAVED_NUMBERS));
-      }
-    } catch (e) {
-      console.error("Failed to load saved numbers from storage", e);
-      setSavedNumbers(MOCK_SAVED_NUMBERS);
-    } finally {
+  const fetchSavedNumbers = useCallback(async () => {
+    if (!user) {
+      setSavedNumbers([]);
       setIsLoading(false);
+      return;
     }
-  }, []);
 
-  // Simuler la sauvegarde dans le stockage local
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('saved_numbers')
+      .select('id, name, number')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching saved numbers:", error);
+      showError("Erreur lors du chargement des numéros enregistrés.");
+      setSavedNumbers([]);
+    } else {
+      const numbers: SavedNumber[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        number: item.number,
+      }));
+      setSavedNumbers(numbers);
+    }
+    setIsLoading(false);
+  }, [user]);
+
   useEffect(() => {
-    if (!isLoading) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedNumbers));
-      } catch (e) {
-        console.error("Failed to save numbers to storage", e);
-      }
+    if (!isAuthLoading) {
+      fetchSavedNumbers();
     }
-  }, [savedNumbers, isLoading]);
+  }, [isAuthLoading, fetchSavedNumbers]);
 
-  const addNumber = useCallback((name: string, number: string) => {
-    const newNumber: SavedNumber = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      number: number.trim().replace(/[^0-9+]/g, ""),
-    };
+  const addNumber = useCallback(async (name: string, number: string) => {
+    if (!user) {
+      showError("Vous devez être connecté pour enregistrer des numéros.");
+      return false;
+    }
 
-    if (!newNumber.name || !newNumber.number) {
+    const cleanedNumber = number.trim().replace(/[^0-9+]/g, "");
+    const trimmedName = name.trim();
+
+    if (!trimmedName || !cleanedNumber) {
       showError("Le nom et le numéro sont requis.");
       return false;
     }
-    if (newNumber.number.length < 3) {
+    if (cleanedNumber.length < 3) {
       showError("Le numéro est trop court.");
       return false;
     }
     
-    if (savedNumbers.some(n => n.number === newNumber.number)) {
+    if (savedNumbers.some(n => n.number === cleanedNumber)) {
         showError("Ce numéro est déjà enregistré.");
         return false;
     }
 
-    setSavedNumbers((prev) => [...prev, newNumber]);
-    showSuccess(`Numéro "${newNumber.name}" enregistré.`);
-    console.log("New saved numbers list:", [...savedNumbers, newNumber]);
-    return true;
-  }, [savedNumbers]); // Dependency added to ensure we check for duplicates correctly
+    const newNumberData = {
+      name: trimmedName,
+      number: cleanedNumber,
+      user_id: user.id,
+    };
 
-  const removeNumber = useCallback((id: string) => {
+    const { data, error } = await supabase
+      .from('saved_numbers')
+      .insert(newNumberData)
+      .select('id, name, number')
+      .single();
+
+    if (error) {
+      console.error("Error adding saved number:", error);
+      showError("Erreur lors de l'enregistrement du numéro.");
+      return false;
+    }
+
+    const newSavedNumber: SavedNumber = {
+        id: data.id,
+        name: data.name,
+        number: data.number,
+    };
+
+    setSavedNumbers((prev) => [...prev, newSavedNumber]);
+    showSuccess(`Numéro "${newSavedNumber.name}" enregistré.`);
+    return true;
+  }, [user, savedNumbers]);
+
+  const removeNumber = useCallback(async (id: string) => {
+    if (!user) {
+      showError("Vous devez être connecté pour supprimer des numéros.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from('saved_numbers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error removing saved number:", error);
+      showError("Erreur lors de la suppression du numéro.");
+      return;
+    }
+
     setSavedNumbers((prev) => prev.filter((n) => n.id !== id));
     showSuccess("Numéro enregistré supprimé.");
-  }, []);
+  }, [user]);
 
   return {
     savedNumbers,
     addNumber,
     removeNumber,
-    isLoading,
+    isLoading: isLoading || isAuthLoading,
   };
 };
 
