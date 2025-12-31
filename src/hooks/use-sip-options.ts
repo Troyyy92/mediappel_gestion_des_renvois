@@ -7,6 +7,7 @@ const MOCK_LINES: SipLine[] = [
   { serviceName: "billingAccount1", lineNumber: "0033972103630", description: "Guy (OVH)" },
   { serviceName: "billingAccount1", lineNumber: "0033123456789", description: "Ligne Standard" },
   { serviceName: "billingAccount2", lineNumber: "0033999999999", description: "Support Technique" },
+  { serviceName: "billingAccount3", lineNumber: "0033972223538", description: "Nouvelle Ligne" }, // Added new line
 ];
 
 const initialOptions: SipLineOptions = {
@@ -33,15 +34,29 @@ const useSipOptions = () => {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Simuler des données différentes pour chaque ligne
+    let unconditionalActive = false;
+    let noReplyTimer = 20;
+
+    if (line.lineNumber === MOCK_LINES[0].lineNumber) {
+      unconditionalActive = false;
+      noReplyTimer = 20;
+    } else if (line.lineNumber === MOCK_LINES[3].lineNumber) { // New line specific settings
+      unconditionalActive = true;
+      noReplyTimer = 5;
+    } else {
+      unconditionalActive = true;
+      noReplyTimer = 10;
+    }
+
     const mockData: SipLineOptions = {
       lineNumber: line.lineNumber,
       serviceName: line.serviceName,
       forwarding: {
-        unconditional: { type: "unconditional", active: line.lineNumber === MOCK_LINES[0].lineNumber ? false : true, destination: line.lineNumber === MOCK_LINES[0].lineNumber ? "" : "0600000000" },
+        unconditional: { type: "unconditional", active: unconditionalActive, destination: unconditionalActive ? "0600000000" : "" },
         busy: { type: "busy", active: true, destination: "0611223344" },
         noReply: { type: "noReply", active: true, destination: "0655667788" },
       },
-      noReplyTimer: line.lineNumber === MOCK_LINES[0].lineNumber ? 20 : 10,
+      noReplyTimer: noReplyTimer,
     };
 
     setOptions(mockData);
