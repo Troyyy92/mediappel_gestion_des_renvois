@@ -44,28 +44,48 @@ const useSipOptions = () => {
     // Simuler l'appel API OVH (délai de 1.5s)
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Simuler des données différentes pour chaque ligne
+    // Définir les états par défaut (désactivés)
     let unconditionalActive = false;
+    let busyActive = false;
+    let noReplyActive = false;
     let noReplyTimer = 20;
+    let unconditionalDestination = undefined;
+    let busyDestination = undefined;
+    let noReplyDestination = undefined;
 
+
+    // Logique de simulation spécifique à la ligne
     if (line.lineNumber === MOCK_LINES[0].lineNumber) {
-      unconditionalActive = false;
+      // Guy (OVH) - Unconditional inactive, others active
+      busyActive = true;
+      busyDestination = "0611223344";
+      noReplyActive = true;
+      noReplyDestination = "0655667788";
       noReplyTimer = 20;
     } else if (line.lineNumber === MOCK_LINES[3].lineNumber) {
+      // Nouvelle Ligne - Unconditional active, others inactive
       unconditionalActive = true;
+      unconditionalDestination = "0600000000";
       noReplyTimer = 5;
-    } else {
+    } else if (line.lineNumber === MOCK_LINES[1].lineNumber) {
+      // Ligne Standard - All active
       unconditionalActive = true;
+      unconditionalDestination = "0600000001";
+      busyActive = true;
+      busyDestination = "0611223345";
+      noReplyActive = true;
+      noReplyDestination = "0655667789";
       noReplyTimer = 10;
     }
+    // MOCK_LINES[2] (Support Technique) remains fully inactive by default
 
     const mockData: SipLineOptions = {
       lineNumber: line.lineNumber,
       serviceName: line.serviceName,
       forwarding: {
-        unconditional: { type: "unconditional", active: unconditionalActive, destination: unconditionalActive ? "0600000000" : undefined },
-        busy: { type: "busy", active: true, destination: "0611223344" },
-        noReply: { type: "noReply", active: true, destination: "0655667788" },
+        unconditional: { type: "unconditional", active: unconditionalActive, destination: unconditionalDestination },
+        busy: { type: "busy", active: busyActive, destination: busyDestination },
+        noReply: { type: "noReply", active: noReplyActive, destination: noReplyDestination },
       },
       noReplyTimer: noReplyTimer,
     };
