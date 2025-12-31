@@ -56,19 +56,17 @@ const useSipOptions = () => {
 
     // Logique de simulation spécifique à la ligne
     if (line.lineNumber === MOCK_LINES[0].lineNumber) {
-      // Guy (OVH) - Unconditional inactive, others active
+      // Guy (OVH) - Busy and NoReply active
       busyActive = true;
       busyDestination = "0611223344";
       noReplyActive = true;
       noReplyDestination = "0655667788";
       noReplyTimer = 20;
     } else if (line.lineNumber === MOCK_LINES[3].lineNumber) {
-      // Nouvelle Ligne - Unconditional active, others inactive
-      unconditionalActive = true;
-      unconditionalDestination = "0600000000";
+      // Nouvelle Ligne - All inactive by default, only timer changed
       noReplyTimer = 5;
     } else if (line.lineNumber === MOCK_LINES[1].lineNumber) {
-      // Ligne Standard - All active
+      // Ligne Standard - All active (for testing all states)
       unconditionalActive = true;
       unconditionalDestination = "0600000001";
       busyActive = true;
