@@ -5,7 +5,6 @@ import LineSelector from "@/components/LineSelector";
 import LineInfoCard from "@/components/LineInfoCard";
 import ForwardingForm from "@/components/ForwardingForm";
 import NoReplyTimerForm from "@/components/NoReplyTimerForm";
-import SavedNumbersManager from "@/components/SavedNumbersManager";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
@@ -91,14 +90,6 @@ const Index = () => {
               <LineInfoCard options={options} />
 
               <Separator />
-              
-              <SavedNumbersManager
-                savedNumbers={savedNumbers}
-                addNumber={addNumber}
-                removeNumber={removeNumber}
-              />
-
-              <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <ForwardingForm
@@ -108,6 +99,8 @@ const Index = () => {
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
                   savedNumbers={savedNumbers}
+                  addSavedNumber={addNumber}
+                  removeSavedNumber={removeNumber}
                 />
                 <ForwardingForm
                   type="busy"
@@ -116,6 +109,8 @@ const Index = () => {
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
                   savedNumbers={savedNumbers}
+                  addSavedNumber={addNumber}
+                  removeSavedNumber={removeNumber}
                 />
                 <ForwardingForm
                   type="noReply"
@@ -124,6 +119,8 @@ const Index = () => {
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
                   savedNumbers={savedNumbers}
+                  addSavedNumber={addNumber}
+                  removeSavedNumber={removeNumber}
                 />
               </div>
 

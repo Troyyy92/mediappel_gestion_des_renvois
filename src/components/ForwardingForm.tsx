@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { ForwardingOption, ForwardingType, SavedNumber } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
-import { Trash2, Save } from "lucide-react";
+import { Trash2, Save, Plus, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,6 +22,8 @@ interface ForwardingFormProps {
   onUpdate: (type: ForwardingType, destination: string | null) => Promise<void>;
   disabled: boolean;
   savedNumbers: SavedNumber[];
+  addSavedNumber: (name: string, number: string) => boolean;
+  removeSavedNumber: (id: string) => void;
 }
 
 const ForwardingForm: React.FC<ForwardingFormProps> = ({
@@ -31,9 +33,13 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   onUpdate,
   disabled,
   savedNumbers,
+  addSavedNumber,
+  removeSavedNumber,
 }) => {
   const [destination, setDestination] = useState(currentOption.destination || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newSavedName, setNewSavedName] = useState("");
+  const [isSavingNew, setIsSavingNew] = useState(false);
 
   useEffect(() => {
     setDestination(currentOption.destination || "");
@@ -45,16 +51,21 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
     return cleaned.length >= 3;
   };
 
+  const cleanedDestination = destination.trim().replace(/[^0-9+]/g, "");
+  const isDestinationChanged = cleanedDestination !== (currentOption.destination || "");
+  const isNumberValid = isValidNumber(cleanedDestination);
+  const canSubmit = isDestinationChanged && isNumberValid;
+  const canSaveQuick = isNumberValid && !savedNumbers.some(n => n.number === cleanedDestination);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanedDestination = destination.trim().replace(/[^0-9+]/g, "");
 
     if (!cleanedDestination) {
       showError("Veuillez saisir un numéro ou utiliser le bouton de désactivation.");
       return;
     }
 
-    if (!isValidNumber(cleanedDestination)) {
+    if (!isNumberValid) {
       showError("Le numéro de destination semble invalide.");
       return;
     }
@@ -84,45 +95,88 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   };
 
   const handleSelectChange = (value: string) => {
-    setDestination(value);
+    // If the user selects a number, we set it as the destination
+    if (value.startsWith("SAVED_")) {
+        const number = value.substring(6);
+        setDestination(number);
+    } else if (value === "ADD_NEW") {
+        // If user selects 'Add New', we clear the destination and open the saving form
+        setDestination("");
+        setIsSavingNew(true);
+    } else {
+        // Handle selection of existing saved number
+        setDestination(value);
+    }
   };
 
-  const isDestinationChanged = destination.trim() !== (currentOption.destination || "");
+  const handleQuickSave = () => {
+    if (!isNumberValid) {
+        showError("Veuillez saisir un numéro valide avant de l'enregistrer.");
+        return;
+    }
+    setIsSavingNew(true);
+    setNewSavedName(""); // Reset name field
+  };
+
+  const handleSaveNewNumber = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (addSavedNumber(newSavedName, cleanedDestination)) {
+        setIsSavingNew(false);
+        setNewSavedName("");
+    }
+  };
 
   return (
     <Card className="p-4 shadow-lg">
       <h3 className="text-md font-semibold mb-3">{label}</h3>
       <form onSubmit={handleSubmit} className="space-y-3">
         
+        {/* 1. Quick Select */}
         {savedNumbers.length > 0 && (
-          <>
-            <div className="space-y-1">
-              <Label htmlFor={`select-dest-${type}`}>Numéros enregistrés</Label>
-              <Select onValueChange={handleSelectChange} value={destination}>
-                <SelectTrigger id={`select-dest-${type}`} disabled={disabled || isSubmitting}>
-                  <SelectValue placeholder="Choisir un numéro rapide..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {savedNumbers.map((num) => (
-                    <SelectItem key={num.id} value={num.number}>
+          <div className="space-y-1">
+            <Label htmlFor={`select-dest-${type}`}>Numéros enregistrés</Label>
+            <Select onValueChange={handleSelectChange} value={destination}>
+              <SelectTrigger id={`select-dest-${type}`} disabled={disabled || isSubmitting}>
+                <SelectValue placeholder="Choisir un numéro rapide..." />
+              </SelectTrigger>
+              <SelectContent>
+                {savedNumbers.map((num) => (
+                  <div key={num.id} className="flex items-center justify-between pr-2">
+                    <SelectItem value={num.number} className="flex-grow">
                       {num.name} ({num.number})
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            removeSavedNumber(num.id);
+                        }}
+                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                        title={`Supprimer ${num.name}`}
+                    >
+                        <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
             <Separator />
-          </>
+          </div>
         )}
 
+        {/* 2. Manual Input */}
         <div className="space-y-1">
-          <Label htmlFor={`dest-${type}`}>Ou saisir un numéro</Label>
+          <Label htmlFor={`dest-${type}`}>Numéro de destination</Label>
           <Input
             id={`dest-${type}`}
             type="tel"
             placeholder="Ex: 0033612345678"
             value={destination}
-            onChange={(e) => setDestination(e.target.value)}
+            onChange={(e) => {
+                setDestination(e.target.value);
+                setIsSavingNew(false); // Hide quick save form if user starts typing
+            }}
             disabled={disabled || isSubmitting}
             className="w-full"
           />
@@ -130,20 +184,58 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
             Format national (06...) ou international (00336...).
           </p>
         </div>
-        <div className="flex space-x-2">
+
+        {/* 3. Quick Save Form */}
+        {isSavingNew && isNumberValid && (
+            <Card className="p-3 bg-gray-50 dark:bg-gray-900 border">
+                <form onSubmit={handleSaveNewNumber} className="space-y-2">
+                    <Label htmlFor={`save-name-${type}`} className="text-xs font-semibold">
+                        Nom pour l'enregistrement rapide
+                    </Label>
+                    <Input
+                        id={`save-name-${type}`}
+                        value={newSavedName}
+                        onChange={(e) => setNewSavedName(e.target.value)}
+                        placeholder="Ex: Mobile de secours"
+                        required
+                    />
+                    <Button type="submit" size="sm" className="w-full" disabled={!newSavedName.trim()}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Enregistrer {cleanedDestination}
+                    </Button>
+                </form>
+            </Card>
+        )}
+
+        {/* 4. Action Buttons */}
+        <div className="flex space-x-2 pt-2">
           <Button
             type="submit"
             className="flex-1 bg-primary hover:bg-primary/90"
-            disabled={disabled || isSubmitting || !isDestinationChanged || !isValidNumber(destination)}
+            disabled={disabled || isSubmitting || !canSubmit}
           >
             <Save className="w-4 h-4 mr-2" />
-            {isSubmitting ? "Sauvegarde..." : "Enregistrer"}
+            {isSubmitting ? "Sauvegarde..." : "Appliquer le renvoi"}
           </Button>
+          
+          {canSaveQuick && !isSavingNew && (
+            <Button
+                type="button"
+                variant="outline"
+                onClick={handleQuickSave}
+                disabled={disabled || isSubmitting}
+                title="Enregistrer ce numéro pour une sélection rapide future"
+            >
+                <Plus className="w-4 h-4" />
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="destructive"
             onClick={handleDisable}
             disabled={disabled || isSubmitting || (!currentOption.active && !currentOption.destination)}
+            title="Désactiver le renvoi"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
