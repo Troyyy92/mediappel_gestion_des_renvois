@@ -8,9 +8,10 @@ import NoReplyTimerForm from "@/components/NoReplyTimerForm";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle, MousePointerClick, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertTriangle, MousePointerClick, AlertCircle, HelpCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
 
 const Index = () => {
   const {
@@ -29,12 +30,16 @@ const Index = () => {
   } = useSipOptions();
   
   const { savedNumbers, addNumber, removeNumber } = useSavedNumbers();
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleReset = () => {
     if (window.confirm("ATTENTION : Voulez-vous vraiment désactiver TOUS les renvois pour cette ligne ?")) {
       resetAllForwarding();
     }
   };
+
+  // Fonction pour déterminer si l'erreur est liée à l'authentification OVH
+  const isOvhAuthError = error && error.includes("You must login first");
 
   return (
     <Layout>
@@ -76,17 +81,63 @@ const Index = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
               <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="text-red-800 font-medium">Erreur de connexion</p>
                 <p className="text-red-600 text-sm">{error}</p>
+                
+                {isOvhAuthError && (
+                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-yellow-800 text-sm">
+                      <strong>Problème d'authentification OVH :</strong> Vos clés OVH ne sont pas correctement configurées ou n'ont pas les permissions nécessaires.
+                    </p>
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto text-blue-600 hover:text-blue-800 mt-1"
+                      onClick={() => setShowHelp(true)}
+                    >
+                      <HelpCircle className="w-4 h-4 mr-1 inline" />
+                      Voir les instructions de configuration
+                    </Button>
+                  </div>
+                )}
+                
                 <Button 
                   variant="link" 
-                  className="p-0 h-auto text-red-600 hover:text-red-800"
+                  className="p-0 h-auto text-red-600 hover:text-red-800 mt-2"
                   onClick={() => refreshLines(false)}
                 >
                   Réessayer
                 </Button>
               </div>
+            </div>
+          )}
+          
+          {showHelp && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-bold text-blue-800 mb-2">Configuration des clés OVH</h3>
+              <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1">
+                <li>Connectez-vous à votre compte OVH : <a href="https://www.ovh.com/auth/" target="_blank" rel="noopener noreferrer" className="underline">https://www.ovh.com/auth/</a></li>
+                <li>Allez dans "API & Services" > "API Access"</li>
+                <li>Créez une nouvelle application avec les permissions nécessaires</li>
+                <li>Générez une clé de consommateur avec les permissions pour :
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>GET /telephony</li>
+                    <li>GET /telephony/{'{billingAccount}'}/line</li>
+                    <li>GET /telephony/{'{billingAccount}'}/line/{'{lineNumber}'}</li>
+                    <li>GET/PUT /telephony/{'{billingAccount}'}/line/{'{lineNumber}'}/forwarding/*</li>
+                    <li>GET/PUT /telephony/{'{billingAccount}'}/line/{'{lineNumber}'}/noReplyTimer</li>
+                  </ul>
+                </li>
+                <li>Mettez à jour les variables d'environnement avec les nouvelles clés</li>
+              </ol>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="mt-2"
+                onClick={() => setShowHelp(false)}
+              >
+                Fermer
+              </Button>
             </div>
           )}
           
