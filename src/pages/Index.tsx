@@ -5,7 +5,9 @@ import LineSelector from "@/components/LineSelector";
 import LineInfoCard from "@/components/LineInfoCard";
 import ForwardingForm from "@/components/ForwardingForm";
 import NoReplyTimerForm from "@/components/NoReplyTimerForm";
+import SavedNumbersManager from "@/components/SavedNumbersManager";
 import useSipOptions from "@/hooks/use-sip-options";
+import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, AlertTriangle, MousePointerClick } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -24,6 +26,8 @@ const Index = () => {
     resetAllForwarding,
     isLineSelected,
   } = useSipOptions();
+
+  const { savedNumbers, addNumber, removeNumber } = useSavedNumbers();
 
   const handleReset = () => {
     if (window.confirm("ATTENTION : Voulez-vous vraiment désactiver TOUS les renvois pour cette ligne ?")) {
@@ -79,12 +83,20 @@ const Index = () => {
             <Card className="p-8 text-center border-2 border-dashed border-gray-300 bg-gray-50 h-48 flex flex-col items-center justify-center">
               <MousePointerClick className="w-8 h-8 text-gray-500 mb-3" />
               <p className="text-lg font-medium text-gray-700">
-                Veuillez sélectionner une ligne SIP ci-dessus pour commencer la configuration.
+                Veuillez sélectionner une ligne ci-dessus pour commencer la configuration.
               </p>
             </Card>
           ) : (
             <div className="space-y-6">
               <LineInfoCard options={options} />
+
+              <Separator />
+              
+              <SavedNumbersManager
+                savedNumbers={savedNumbers}
+                addNumber={addNumber}
+                removeNumber={removeNumber}
+              />
 
               <Separator />
 
@@ -95,6 +107,7 @@ const Index = () => {
                   currentOption={options.forwarding.unconditional}
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
+                  savedNumbers={savedNumbers}
                 />
                 <ForwardingForm
                   type="busy"
@@ -102,6 +115,7 @@ const Index = () => {
                   currentOption={options.forwarding.busy}
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
+                  savedNumbers={savedNumbers}
                 />
                 <ForwardingForm
                   type="noReply"
@@ -109,6 +123,7 @@ const Index = () => {
                   currentOption={options.forwarding.noReply}
                   onUpdate={updateForwarding}
                   disabled={isLoading || !isLineSelected}
+                  savedNumbers={savedNumbers}
                 />
               </div>
 

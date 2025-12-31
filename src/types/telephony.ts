@@ -22,3 +22,9 @@ export interface SipLine {
   lineNumber: string;
   description: string;
 }
+
+export interface SavedNumber {
+  id: string;
+  name: string;
+  number: string;
+}
