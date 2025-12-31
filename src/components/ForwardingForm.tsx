@@ -112,13 +112,17 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   const handleSaveNewNumber = (e: React.FormEvent) => {
     e.preventDefault();
     if (addSavedNumber(newSavedName, cleanedDestination)) {
+        // Crucial: Update the local destination state to the cleaned version
+        // This ensures the Select component correctly identifies the newly saved number
+        setDestination(cleanedDestination); 
         setIsSavingNew(false);
         setNewSavedName("");
     }
   };
   
   // Determine the current value for the Select component
-  const currentSavedNumber = savedNumbers.find(n => n.number === destination)?.number || "";
+  // We use cleanedDestination for comparison to ensure consistency with saved numbers
+  const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
 
   return (
     <Card className="p-4 shadow-lg">
