@@ -48,7 +48,7 @@ class OvhApiClient {
     
     // Vérification des clés
     if (!this.appKey || !this.appSecret || !this.consumerKey) {
-      console.error("OVH API keys are missing. Please check your environment variables.");
+      console.warn("OVH API keys are missing. Please check your environment variables.");
     }
   }
 
@@ -59,16 +59,17 @@ class OvhApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Vérifier que les clés sont présentes
+    if (!this.appKey || !this.appSecret || !this.consumerKey) {
+      throw new Error("OVH API keys are missing. Please check your environment variables.");
+    }
+    
     const defaultHeaders = {
       "X-Ovh-Application": this.appKey,
       "X-Ovh-Timestamp": Math.round(Date.now() / 1000).toString(),
       "Content-Type": "application/json",
+      "X-Ovh-Consumer": this.consumerKey,
     };
-    
-    // Ajout de la clé de consommateur si présente
-    if (this.consumerKey) {
-      (defaultHeaders as any)["X-Ovh-Consumer"] = this.consumerKey;
-    }
     
     const config: RequestInit = {
       ...options,
@@ -79,14 +80,22 @@ class OvhApiClient {
     };
     
     try {
+      console.log(`Making request to: ${url}`);
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        const errorData: OvhApiError = await response.json();
+        let errorData: OvhApiError;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+        }
         throw new Error(`OVH API Error: ${errorData.message} (${errorData.httpCode})`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log(`Response from ${url}:`, data);
+      return data;
     } catch (error) {
       console.error("OVH API Request failed:", error);
       throw error;
@@ -96,8 +105,14 @@ class OvhApiClient {
   // Récupérer la liste des lignes SIP
   async getSipLines(): Promise<OvhSipLine[]> {
     try {
+      // Vérifier que les clés sont présentes
+      if (!this.appKey || !this.appSecret || !this.consumerKey) {
+        throw new Error("OVH API keys are missing. Please check your environment variables.");
+      }
+      
       // Récupération des billing accounts
       const billingAccounts: string[] = await this.makeRequest("/telephony");
+      console.log("Billing accounts:", billingAccounts);
       
       const allLines: OvhSipLine[] = [];
       
@@ -105,11 +120,14 @@ class OvhApiClient {
       for (const billingAccount of billingAccounts) {
         try {
           const lines: string[] = await this.makeRequest(`/telephony/${billingAccount}/line`);
+          console.log(`Lines for ${billingAccount}:`, lines);
           
           // Récupérer les détails de chaque ligne
           for (const lineNumber of lines) {
             try {
               const lineDetails: any = await this.makeRequest(`/telephony/${billingAccount}/line/${lineNumber}`);
+              console.log(`Line details for ${lineNumber}:`, lineDetails);
+              
               allLines.push({
                 serviceName: billingAccount,
                 lineNumber: lineDetails.lineNumber,
@@ -134,6 +152,11 @@ class OvhApiClient {
   // Récupérer les options de renvoi pour une ligne spécifique
   async getSipLineOptions(serviceName: string, lineNumber: string): Promise<OvhForwardingOptions> {
     try {
+      // Vérifier que les clés sont présentes
+      if (!this.appKey || !this.appSecret || !this.consumerKey) {
+        throw new Error("OVH API keys are missing. Please check your environment variables.");
+      }
+      
       // Récupération des paramètres de renvoi
       const unconditional = await this.makeRequest<any>(`/telephony/${serviceName}/line/${lineNumber}/forwarding/unconditional`);
       const busy = await this.makeRequest<any>(`/telephony/${serviceName}/line/${lineNumber}/forwarding/busy`);
@@ -173,6 +196,11 @@ class OvhApiClient {
     destination: string | null
   ): Promise<void> {
     try {
+      // Vérifier que les clés sont présentes
+      if (!this.appKey || !this.appSecret || !this.consumerKey) {
+        throw new Error("OVH API keys are missing. Please check your environment variables.");
+      }
+      
       const endpoint = `/telephony/${serviceName}/line/${lineNumber}/forwarding/${type}`;
       
       if (destination) {
@@ -209,6 +237,11 @@ class OvhApiClient {
     timer: number
   ): Promise<void> {
     try {
+      // Vérifier que les clés sont présentes
+      if (!this.appKey || !this.appSecret || !this.consumerKey) {
+        throw new Error("OVH API keys are missing. Please check your environment variables.");
+      }
+      
       const endpoint = `/telephony/${serviceName}/line/${lineNumber}/noReplyTimer`;
       
       await this.makeRequest(endpoint, {
@@ -229,6 +262,11 @@ class OvhApiClient {
   // Désactiver tous les renvois
   async resetAllForwarding(serviceName: string, lineNumber: string): Promise<void> {
     try {
+      // Vérifier que les clés sont présentes
+      if (!this.appKey || !this.appSecret || !this.consumerKey) {
+        throw new Error("OVH API keys are missing. Please check your environment variables.");
+      }
+      
       // Désactiver chaque type de renvoi
       await this.updateForwarding(serviceName, lineNumber, "unconditional", null);
       await this.updateForwarding(serviceName, lineNumber, "busy", null);

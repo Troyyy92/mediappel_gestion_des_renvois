@@ -8,7 +8,7 @@ import NoReplyTimerForm from "@/components/NoReplyTimerForm";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle, MousePointerClick } from "lucide-react";
+import { RefreshCw, AlertTriangle, MousePointerClick, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -24,7 +24,8 @@ const Index = () => {
     updateNoReplyTimer,
     resetAllForwarding,
     isLineSelected,
-    refreshLines, // Nouvelle fonction
+    refreshLines,
+    error,
   } = useSipOptions();
   
   const { savedNumbers, addNumber, removeNumber } = useSavedNumbers();
@@ -71,6 +72,23 @@ const Index = () => {
               </Button>
             </div>
           </div>
+          
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-red-800 font-medium">Erreur de connexion</p>
+                <p className="text-red-600 text-sm">{error}</p>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-red-600 hover:text-red-800"
+                  onClick={() => refreshLines(false)}
+                >
+                  Réessayer
+                </Button>
+              </div>
+            </div>
+          )}
           
           {isLoading && isLineSelected ? (
             <div className="flex flex-col items-center justify-center h-48">

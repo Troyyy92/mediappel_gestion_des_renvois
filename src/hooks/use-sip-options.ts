@@ -34,10 +34,12 @@ const useSipOptions = () => {
   const [options, setOptions] = useState<SipLineOptions>(EMPTY_OPTIONS);
   const [availableLines, setAvailableLines] = useState<SipLine[]>([]);
   const [selectedLine, setSelectedLine] = useState<SipLine>(EMPTY_LINE);
+  const [error, setError] = useState<string | null>(null);
 
   // Récupérer les lignes SIP disponibles
-  const fetchLines = useCallback(async () => {
+  const fetchLines = useCallback(async (showToast = true) => {
     setIsLoading(true);
+    setError(null);
     try {
       const lines = await ovhClient.getSipLines();
       setAvailableLines(lines);
@@ -48,10 +50,14 @@ const useSipOptions = () => {
         setSelectedLine(lines[0]);
       }
       
-      showSuccess("Lignes téléphoniques chargées");
-    } catch (error) {
+      if (showToast) {
+        showSuccess("Lignes téléphoniques chargées");
+      }
+    } catch (error: any) {
       console.error("Error fetching SIP lines:", error);
-      showError("Erreur lors du chargement des lignes téléphoniques");
+      const errorMessage = error.message || "Erreur lors du chargement des lignes téléphoniques";
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +71,7 @@ const useSipOptions = () => {
     }
 
     setIsLoading(true);
+    setError(null);
     try {
       const ovhOptions = await ovhClient.getSipLineOptions(
         line.serviceName,
@@ -96,9 +103,11 @@ const useSipOptions = () => {
 
       setOptions(formattedOptions);
       showSuccess(`Paramètres chargés pour la ligne ${line.description}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching options:", error);
-      showError("Erreur lors du chargement des paramètres de la ligne");
+      const errorMessage = error.message || "Erreur lors du chargement des paramètres de la ligne";
+      setError(errorMessage);
+      showError(errorMessage);
       setOptions(EMPTY_OPTIONS);
     } finally {
       setIsLoading(false);
@@ -143,9 +152,10 @@ const useSipOptions = () => {
           },
         },
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating forwarding:", error);
-      // L'erreur est déjà gérée dans le client OVH
+      const errorMessage = error.message || `Erreur lors de la mise à jour du renvoi ${type}`;
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -167,9 +177,10 @@ const useSipOptions = () => {
         ...prev,
         noReplyTimer: timer,
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating no reply timer:", error);
-      // L'erreur est déjà gérée dans le client OVH
+      const errorMessage = error.message || "Erreur lors de la mise à jour du délai de non-réponse";
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -206,9 +217,10 @@ const useSipOptions = () => {
           },
         },
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error resetting all forwarding:", error);
-      // L'erreur est déjà gérée dans le client OVH
+      const errorMessage = error.message || "Erreur lors de la réinitialisation des renvois";
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +246,8 @@ const useSipOptions = () => {
     updateNoReplyTimer,
     resetAllForwarding,
     isLineSelected: !!selectedLine.lineNumber,
-    refreshLines: fetchLines, // Ajout d'une fonction pour rafraîchir les lignes
+    refreshLines: fetchLines,
+    error,
   };
 };
 
