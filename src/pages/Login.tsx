@@ -15,12 +15,12 @@ function Login() {
           appearance={{
             theme: ThemeSupa,
             variables: {
-                default: {
-                    colors: {
-                        brand: 'hsl(var(--primary))',
-                        brandAccent: 'hsl(var(--primary-foreground))',
-                    },
+              default: {
+                colors: {
+                  brand: 'hsl(var(--primary))',
+                  brandAccent: 'hsl(var(--primary-foreground))',
                 },
+              },
             },
           }}
           theme="light"
