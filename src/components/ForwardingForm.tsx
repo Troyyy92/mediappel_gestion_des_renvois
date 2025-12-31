@@ -95,18 +95,9 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   };
 
   const handleSelectChange = (value: string) => {
-    // If the user selects a number, we set it as the destination
-    if (value.startsWith("SAVED_")) {
-        const number = value.substring(6);
-        setDestination(number);
-    } else if (value === "ADD_NEW") {
-        // If user selects 'Add New', we clear the destination and open the saving form
-        setDestination("");
-        setIsSavingNew(true);
-    } else {
-        // Handle selection of existing saved number
-        setDestination(value);
-    }
+    // Set the destination from the selected saved number
+    setDestination(value);
+    setIsSavingNew(false); // Hide quick save form if a saved number is selected
   };
 
   const handleQuickSave = () => {
@@ -125,6 +116,9 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
         setNewSavedName("");
     }
   };
+  
+  // Determine the current value for the Select component
+  const currentSavedNumber = savedNumbers.find(n => n.number === destination)?.number || "";
 
   return (
     <Card className="p-4 shadow-lg">
@@ -135,7 +129,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
         {savedNumbers.length > 0 && (
           <div className="space-y-1">
             <Label htmlFor={`select-dest-${type}`}>Numéros enregistrés</Label>
-            <Select onValueChange={handleSelectChange} value={destination}>
+            <Select onValueChange={handleSelectChange} value={currentSavedNumber}>
               <SelectTrigger id={`select-dest-${type}`} disabled={disabled || isSubmitting}>
                 <SelectValue placeholder="Choisir un numéro rapide..." />
               </SelectTrigger>
@@ -146,11 +140,16 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
                       {num.name} ({num.number})
                     </SelectItem>
                     <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         onClick={(e) => {
                             e.stopPropagation();
                             removeSavedNumber(num.id);
+                            // If the deleted number was the current destination, clear the input
+                            if (destination === num.number) {
+                                setDestination("");
+                            }
                         }}
                         className="h-6 w-6 text-destructive hover:bg-destructive/10"
                         title={`Supprimer ${num.name}`}
