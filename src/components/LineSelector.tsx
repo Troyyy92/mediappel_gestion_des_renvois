@@ -36,10 +36,6 @@ const LineSelector: React.FC<LineSelectorProps> = ({
           <SelectValue placeholder="Sélectionner une ligne..." />
         </SelectTrigger>
         <SelectContent>
-          {/* Placeholder item for no selection */}
-          <SelectItem value="" disabled>
-            Sélectionner une ligne...
-          </SelectItem>
           {availableLines.map((line) => (
             <SelectItem key={line.lineNumber} value={line.lineNumber}>
               {line.description} ({line.lineNumber})
