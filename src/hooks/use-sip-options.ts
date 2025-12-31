@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { SipLineOptions, SipLine, ForwardingType } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
-
-// Données de simulation pour la gestion multi-lignes
-const MOCK_LINES: SipLine[] = [
-  { serviceName: "billingAccount1", lineNumber: "0033972103630", description: "Guy (OVH)" },
-  { serviceName: "billingAccount1", lineNumber: "0033123456789", description: "Ligne Standard" },
-  { serviceName: "billingAccount2", lineNumber: "0033999999999", description: "Support Technique" },
-  { serviceName: "billingAccount3", lineNumber: "0033972223538", description: "Nouvelle Ligne" },
-];
+import { ovhClient } from "@/integrations/ovh/client";
 
 const EMPTY_LINE: SipLine = {
   serviceName: "",
@@ -20,20 +13,51 @@ const EMPTY_OPTIONS: SipLineOptions = {
   lineNumber: "",
   serviceName: "",
   forwarding: {
-    unconditional: { type: "unconditional", active: false },
-    busy: { type: "busy", active: false },
-    noReply: { type: "noReply", active: false },
+    unconditional: {
+      type: "unconditional",
+      active: false,
+    },
+    busy: {
+      type: "busy",
+      active: false,
+    },
+    noReply: {
+      type: "noReply",
+      active: false,
+    },
   },
   noReplyTimer: 0,
 };
 
 const useSipOptions = () => {
-  const [isLoading, setIsLoading] = useState(false); // Start as false since we don't load anything initially
+  const [isLoading, setIsLoading] = useState(false);
   const [options, setOptions] = useState<SipLineOptions>(EMPTY_OPTIONS);
-  const [availableLines, setAvailableLines] = useState<SipLine[]>(MOCK_LINES);
+  const [availableLines, setAvailableLines] = useState<SipLine[]>([]);
   const [selectedLine, setSelectedLine] = useState<SipLine>(EMPTY_LINE);
 
-  // Simule la récupération des données (Feature F1)
+  // Récupérer les lignes SIP disponibles
+  const fetchLines = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const lines = await ovhClient.getSipLines();
+      setAvailableLines(lines);
+      
+      // Si aucune ligne n'est sélectionnée et qu'il y a des lignes disponibles,
+      // sélectionner la première par défaut
+      if (!selectedLine.lineNumber && lines.length > 0) {
+        setSelectedLine(lines[0]);
+      }
+      
+      showSuccess("Lignes téléphoniques chargées");
+    } catch (error) {
+      console.error("Error fetching SIP lines:", error);
+      showError("Erreur lors du chargement des lignes téléphoniques");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedLine.lineNumber]);
+
+  // Récupérer les options pour une ligne spécifique
   const fetchOptions = useCallback(async (line: SipLine) => {
     if (!line.lineNumber) {
       setOptions(EMPTY_OPTIONS);
@@ -41,58 +65,52 @@ const useSipOptions = () => {
     }
 
     setIsLoading(true);
-    // Simuler l'appel API OVH (délai de 1.5s)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const ovhOptions = await ovhClient.getSipLineOptions(
+        line.serviceName,
+        line.lineNumber
+      );
 
-    // Définir les états par défaut (désactivés)
-    let unconditionalActive = false;
-    let busyActive = false;
-    let noReplyActive = false;
-    let noReplyTimer = 20;
-    let unconditionalDestination = undefined;
-    let busyDestination = undefined;
-    let noReplyDestination = undefined;
+      const formattedOptions: SipLineOptions = {
+        lineNumber: line.lineNumber,
+        serviceName: line.serviceName,
+        forwarding: {
+          unconditional: {
+            type: "unconditional",
+            active: ovhOptions.forwarding.unconditional.active,
+            destination: ovhOptions.forwarding.unconditional.destination,
+          },
+          busy: {
+            type: "busy",
+            active: ovhOptions.forwarding.busy.active,
+            destination: ovhOptions.forwarding.busy.destination,
+          },
+          noReply: {
+            type: "noReply",
+            active: ovhOptions.forwarding.noReply.active,
+            destination: ovhOptions.forwarding.noReply.destination,
+          },
+        },
+        noReplyTimer: ovhOptions.noReplyTimer,
+      };
 
-
-    // Logique de simulation spécifique à la ligne
-    if (line.lineNumber === MOCK_LINES[0].lineNumber) {
-      // Guy (OVH) - Busy and NoReply active
-      busyActive = true;
-      busyDestination = "0611223344";
-      noReplyActive = true;
-      noReplyDestination = "0655667788";
-      noReplyTimer = 20;
-    } else if (line.lineNumber === MOCK_LINES[3].lineNumber) {
-      // Nouvelle Ligne - All inactive by default, only timer changed
-      noReplyTimer = 5;
-    } else if (line.lineNumber === MOCK_LINES[1].lineNumber) {
-      // Ligne Standard - All active (for testing all states)
-      unconditionalActive = true;
-      unconditionalDestination = "0600000001";
-      busyActive = true;
-      busyDestination = "0611223345";
-      noReplyActive = true;
-      noReplyDestination = "0655667789";
-      noReplyTimer = 10;
+      setOptions(formattedOptions);
+      showSuccess(`Paramètres chargés pour la ligne ${line.description}`);
+    } catch (error) {
+      console.error("Error fetching options:", error);
+      showError("Erreur lors du chargement des paramètres de la ligne");
+      setOptions(EMPTY_OPTIONS);
+    } finally {
+      setIsLoading(false);
     }
-    // MOCK_LINES[2] (Support Technique) remains fully inactive by default
-
-    const mockData: SipLineOptions = {
-      lineNumber: line.lineNumber,
-      serviceName: line.serviceName,
-      forwarding: {
-        unconditional: { type: "unconditional", active: unconditionalActive, destination: unconditionalDestination },
-        busy: { type: "busy", active: busyActive, destination: busyDestination },
-        noReply: { type: "noReply", active: noReplyActive, destination: noReplyDestination },
-      },
-      noReplyTimer: noReplyTimer,
-    };
-
-    setOptions(mockData);
-    setIsLoading(false);
-    showSuccess(`Paramètres chargés pour la ligne ${line.description}.`);
   }, []);
 
+  // Charger les lignes au démarrage
+  useEffect(() => {
+    fetchLines();
+  }, [fetchLines]);
+
+  // Charger les options quand une ligne est sélectionnée
   useEffect(() => {
     if (selectedLine.lineNumber) {
       fetchOptions(selectedLine);
@@ -101,69 +119,99 @@ const useSipOptions = () => {
     }
   }, [selectedLine, fetchOptions]);
 
-  // Simule la modification d'un renvoi (Feature F2)
+  // Mettre à jour un renvoi
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
     if (!selectedLine.lineNumber) return;
-    
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const isActive = !!destination;
-    
-    setOptions(prev => ({
-      ...prev,
-      forwarding: {
-        ...prev.forwarding,
-        [type]: {
-          ...prev.forwarding[type],
-          active: isActive,
-          destination: destination || undefined,
+    setIsLoading(true);
+    try {
+      await ovhClient.updateForwarding(
+        selectedLine.serviceName,
+        selectedLine.lineNumber,
+        type,
+        destination
+      );
+
+      setOptions(prev => ({
+        ...prev,
+        forwarding: {
+          ...prev.forwarding,
+          [type]: {
+            ...prev.forwarding[type],
+            active: !!destination,
+            destination: destination || undefined,
+          },
         },
-      },
-    }));
-    
-    setIsLoading(false);
-    if (isActive) {
-        showSuccess(`Renvoi ${type} mis à jour vers ${destination}.`);
-    } else {
-        showSuccess(`Renvoi ${type} désactivé.`);
+      }));
+    } catch (error) {
+      console.error("Error updating forwarding:", error);
+      // L'erreur est déjà gérée dans le client OVH
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Simule la modification du délai (Feature F3)
+  // Mettre à jour le délai de non-réponse
   const updateNoReplyTimer = async (timer: number) => {
     if (!selectedLine.lineNumber) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await ovhClient.updateNoReplyTimer(
+        selectedLine.serviceName,
+        selectedLine.lineNumber,
+        timer
+      );
 
-    setOptions(prev => ({
-      ...prev,
-      noReplyTimer: timer,
-    }));
-
-    setIsLoading(false);
-    showSuccess(`Délai de non-réponse mis à jour à ${timer} secondes.`);
+      setOptions(prev => ({
+        ...prev,
+        noReplyTimer: timer,
+      }));
+    } catch (error) {
+      console.error("Error updating no reply timer:", error);
+      // L'erreur est déjà gérée dans le client OVH
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Simule la réinitialisation (Désactiver tout)
+  // Réinitialiser tous les renvois
   const resetAllForwarding = async () => {
     if (!selectedLine.lineNumber) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      await ovhClient.resetAllForwarding(
+        selectedLine.serviceName,
+        selectedLine.lineNumber
+      );
 
-    setOptions(prev => ({
-      ...prev,
-      forwarding: {
-        unconditional: { type: "unconditional", active: false, destination: undefined },
-        busy: { type: "busy", active: false, destination: undefined },
-        noReply: { type: "noReply", active: false, destination: undefined },
-      },
-    }));
-
-    setIsLoading(false);
-    showSuccess("Tous les renvois ont été désactivés (Réinitialisation effectuée).");
+      setOptions(prev => ({
+        ...prev,
+        forwarding: {
+          unconditional: {
+            type: "unconditional",
+            active: false,
+            destination: undefined,
+          },
+          busy: {
+            type: "busy",
+            active: false,
+            destination: undefined,
+          },
+          noReply: {
+            type: "noReply",
+            active: false,
+            destination: undefined,
+          },
+        },
+      }));
+    } catch (error) {
+      console.error("Error resetting all forwarding:", error);
+      // L'erreur est déjà gérée dans le client OVH
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLineChange = (lineNumber: string) => {
@@ -171,7 +219,6 @@ const useSipOptions = () => {
     if (line) {
       setSelectedLine(line);
     } else {
-      // If the user selects the placeholder/empty value
       setSelectedLine(EMPTY_LINE);
     }
   };
@@ -187,6 +234,7 @@ const useSipOptions = () => {
     updateNoReplyTimer,
     resetAllForwarding,
     isLineSelected: !!selectedLine.lineNumber,
+    refreshLines: fetchLines, // Ajout d'une fonction pour rafraîchir les lignes
   };
 };
 

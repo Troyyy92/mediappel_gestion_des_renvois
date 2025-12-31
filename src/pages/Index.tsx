@@ -24,8 +24,9 @@ const Index = () => {
     updateNoReplyTimer,
     resetAllForwarding,
     isLineSelected,
+    refreshLines, // Nouvelle fonction
   } = useSipOptions();
-
+  
   const { savedNumbers, addNumber, removeNumber } = useSavedNumbers();
 
   const handleReset = () => {
@@ -38,14 +39,14 @@ const Index = () => {
     <Layout>
       <div className="w-full max-w-4xl mx-auto">
         <AppHeader />
-
+        
         <LineSelector
           availableLines={availableLines}
           selectedLineNumber={selectedLine.lineNumber}
           onLineChange={handleLineChange}
           disabled={isLoading}
         />
-
+        
         <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-800">
@@ -70,7 +71,7 @@ const Index = () => {
               </Button>
             </div>
           </div>
-
+          
           {isLoading && isLineSelected ? (
             <div className="flex flex-col items-center justify-center h-48">
               <RefreshCw className="w-8 h-8 animate-spin text-primary" />
@@ -88,9 +89,8 @@ const Index = () => {
           ) : (
             <div className="space-y-6">
               <LineInfoCard options={options} />
-
               <Separator />
-
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <ForwardingForm
                   type="unconditional"
@@ -123,7 +123,7 @@ const Index = () => {
                   removeSavedNumber={removeNumber}
                 />
               </div>
-
+              
               <div className="flex justify-center pt-4">
                 <Card className="w-full max-w-xs shadow-lg">
                   <NoReplyTimerForm
