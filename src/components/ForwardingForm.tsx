@@ -5,15 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { ForwardingOption, ForwardingType, SavedNumber } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
-import { Trash2, Save, Plus, X } from "lucide-react";
+import { Trash2, Save, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import SavedNumberSelectItem from "./SavedNumberSelectItem";
 
 interface ForwardingFormProps {
   type: ForwardingType;
@@ -121,8 +121,16 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   };
   
   // Determine the current value for the Select component
-  // We use cleanedDestination for comparison to ensure consistency with saved numbers
   const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
+
+  const handleRemoveSavedNumber = (id: string) => {
+    const numberToRemove = savedNumbers.find(n => n.id === id)?.number;
+    removeSavedNumber(id);
+    // If the deleted number was the current destination, clear the input
+    if (destination === numberToRemove) {
+        setDestination("");
+    }
+  };
 
   return (
     <Card className="p-4 shadow-lg">
@@ -139,28 +147,11 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {savedNumbers.map((num) => (
-                  <div key={num.id} className="flex items-center justify-between pr-2">
-                    <SelectItem value={num.number} className="flex-grow">
-                      {num.name} ({num.number})
-                    </SelectItem>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            removeSavedNumber(num.id);
-                            // If the deleted number was the current destination, clear the input
-                            if (destination === num.number) {
-                                setDestination("");
-                            }
-                        }}
-                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                        title={`Supprimer ${num.name}`}
-                    >
-                        <X className="w-3 h-3" />
-                    </Button>
-                  </div>
+                    <SavedNumberSelectItem 
+                        key={num.id} 
+                        num={num} 
+                        onRemove={handleRemoveSavedNumber} 
+                    />
                 ))}
               </SelectContent>
             </Select>
