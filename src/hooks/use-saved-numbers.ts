@@ -59,11 +59,17 @@ const useSavedNumbers = () => {
       showError("Le numéro est trop court.");
       return false;
     }
+    
+    if (savedNumbers.some(n => n.number === newNumber.number)) {
+        showError("Ce numéro est déjà enregistré.");
+        return false;
+    }
 
     setSavedNumbers((prev) => [...prev, newNumber]);
     showSuccess(`Numéro "${newNumber.name}" enregistré.`);
+    console.log("New saved numbers list:", [...savedNumbers, newNumber]);
     return true;
-  }, []);
+  }, [savedNumbers]); // Dependency added to ensure we check for duplicates correctly
 
   const removeNumber = useCallback((id: string) => {
     setSavedNumbers((prev) => prev.filter((n) => n.id !== id));
