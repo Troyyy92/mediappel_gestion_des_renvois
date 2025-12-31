@@ -7,7 +7,7 @@ import ForwardingForm from "@/components/ForwardingForm";
 import NoReplyTimerForm from "@/components/NoReplyTimerForm";
 import useSipOptions from "@/hooks/use-sip-options";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, MousePointerClick } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -22,6 +22,7 @@ const Index = () => {
     updateForwarding,
     updateNoReplyTimer,
     resetAllForwarding,
+    isLineSelected,
   } = useSipOptions();
 
   const handleReset = () => {
@@ -50,7 +51,7 @@ const Index = () => {
             <div className="flex space-x-2">
               <Button
                 onClick={fetchOptions}
-                disabled={isLoading}
+                disabled={isLoading || !isLineSelected}
                 className="bg-[#11998e] hover:bg-[#38ef7d] text-white transition-colors"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -58,7 +59,7 @@ const Index = () => {
               </Button>
               <Button
                 onClick={handleReset}
-                disabled={isLoading}
+                disabled={isLoading || !isLineSelected}
                 variant="destructive"
               >
                 <AlertTriangle className="w-4 h-4 mr-2" />
@@ -67,13 +68,20 @@ const Index = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && isLineSelected ? (
             <div className="flex flex-col items-center justify-center h-48">
               <RefreshCw className="w-8 h-8 animate-spin text-primary" />
               <p className="mt-4 text-gray-600">
                 Chargement des paramètres...
               </p>
             </div>
+          ) : !isLineSelected ? (
+            <Card className="p-8 text-center border-2 border-dashed border-gray-300 bg-gray-50 h-48 flex flex-col items-center justify-center">
+              <MousePointerClick className="w-8 h-8 text-gray-500 mb-3" />
+              <p className="text-lg font-medium text-gray-700">
+                Veuillez sélectionner une ligne SIP ci-dessus pour commencer la configuration.
+              </p>
+            </Card>
           ) : (
             <div className="space-y-6">
               <LineInfoCard options={options} />
@@ -86,21 +94,21 @@ const Index = () => {
                   label="Renvoi Inconditionnel"
                   currentOption={options.forwarding.unconditional}
                   onUpdate={updateForwarding}
-                  disabled={isLoading}
+                  disabled={isLoading || !isLineSelected}
                 />
                 <ForwardingForm
                   type="busy"
                   label="Renvoi sur Occupation"
                   currentOption={options.forwarding.busy}
                   onUpdate={updateForwarding}
-                  disabled={isLoading}
+                  disabled={isLoading || !isLineSelected}
                 />
                 <ForwardingForm
                   type="noReply"
                   label="Renvoi sur Non-réponse"
                   currentOption={options.forwarding.noReply}
                   onUpdate={updateForwarding}
-                  disabled={isLoading}
+                  disabled={isLoading || !isLineSelected}
                 />
               </div>
 
@@ -109,7 +117,7 @@ const Index = () => {
                   <NoReplyTimerForm
                     currentTimer={options.noReplyTimer}
                     onUpdate={updateNoReplyTimer}
-                    disabled={isLoading}
+                    disabled={isLoading || !isLineSelected}
                   />
                 </Card>
               </div>
