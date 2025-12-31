@@ -25,7 +25,7 @@ const LineSelector: React.FC<LineSelectorProps> = ({
   return (
     <div className="w-full max-w-md mx-auto mb-6">
       <Label htmlFor="line-selector" className="text-white mb-2 block text-left">
-        Ligne SIP à configurer
+        Ligne à configurer
       </Label>
       <Select
         value={selectedLineNumber}
