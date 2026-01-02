@@ -13,7 +13,6 @@ const SavedNumberSelectItem: React.FC<SavedNumberSelectItemProps> = ({ num, onRe
   const handleRemove = (e: React.MouseEvent) => {
     // Stop propagation to prevent the SelectItem from being selected when clicking the delete button
     e.stopPropagation();
-    e.preventDefault();
     onRemove(num.id);
   };
 
@@ -28,7 +27,7 @@ const SavedNumberSelectItem: React.FC<SavedNumberSelectItemProps> = ({ num, onRe
           variant="ghost"
           size="icon"
           onClick={handleRemove}
-          className="h-7 w-7 text-destructive hover:bg-destructive/10 ml-2 flex-shrink-0"
+          className="h-7 w-7 text-destructive hover:bg-destructive/10 ml-2"
           title={`Supprimer ${num.name}`}
         >
           <Trash2 className="w-4 h-4" />
