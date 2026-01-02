@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectTrigger, SelectValue, } from "@/components
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import SavedNumberSelectItem from "./SavedNumberSelectItem";
+import SavedNumbersManager from "./SavedNumbersManager"; // Import du nouveau composant
 
 interface ForwardingFormProps {
   type: ForwardingType;
@@ -48,9 +49,9 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmType, setConfirmType] = useState<"activate" | "deactivate">("activate");
   
-  // État pour la confirmation de suppression (maintenu pour la suppression future si nécessaire, mais non utilisé ici)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [numberToDelete, setNumberToDelete] = useState<SavedNumber | null>(null);
+  // Les états de suppression ne sont plus utilisés ici car gérés par SavedNumbersManager
+  // const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // const [numberToDelete, setNumberToDelete] = useState<SavedNumber | null>(null);
 
   useEffect(() => {
     setDestination(currentOption.destination || "");
@@ -125,9 +126,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   };
 
   const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
-
-  // Suppression de la logique de suppression du numéro enregistré ici, car elle n'est plus déclenchée par le SelectItem.
-  // Les états showDeleteConfirm et numberToDelete sont conservés mais non utilisés.
 
   return (
     <>
@@ -234,6 +232,14 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
             </>
           )}
         </div>
+        
+        {/* Ajout du bouton de gestion des numéros enregistrés */}
+        {!isVoicemailType && (
+          <SavedNumbersManager 
+            savedNumbers={savedNumbers} 
+            removeNumber={removeNumber} 
+          />
+        )}
       </Card>
 
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
