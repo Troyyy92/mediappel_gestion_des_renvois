@@ -36,6 +36,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   addSavedNumber,
   removeSavedNumber,
 }) => {
+  const isVoicemailType = type === "busy" || type === "noReply";
   const [destination, setDestination] = useState(currentOption.destination || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newSavedName, setNewSavedName] = useState("");
@@ -45,41 +46,43 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
     setDestination(currentOption.destination || "");
   }, [currentOption.destination]);
 
-  // Simple validation: check if it looks like a phone number (digits only, min length 3)
   const isValidNumber = (num: string) => {
     const cleaned = num.trim().replace(/[^0-9+]/g, "");
     return cleaned.length >= 3;
   };
 
   const cleanedDestination = destination.trim().replace(/[^0-9+]/g, "");
-  const isDestinationChanged = cleanedDestination !== (currentOption.destination || "");
-  const isNumberValid = isValidNumber(cleanedDestination);
-  const canSubmit = isDestinationChanged && isNumberValid;
-  const canSaveQuick = isNumberValid && !savedNumbers.some(n => n.number === cleanedDestination);
+  
+  // Pour les types "Répondeur", on considère que c'est toujours valide si on veut juste activer/désactiver
+  const isNumberValid = isVoicemailType ? true : isValidNumber(cleanedDestination);
+  
+  // Le changement est détecté si l'état actif change ou si le numéro change (uniquement pour unconditional)
+  const isDestinationChanged = isVoicemailType 
+    ? !currentOption.active 
+    : cleanedDestination !== (currentOption.destination || "");
+
+  const canSubmit = isVoicemailType ? !currentOption.active : (isDestinationChanged && isNumberValid);
+  const canSaveQuick = !isVoicemailType && isNumberValid && !savedNumbers.some(n => n.number === cleanedDestination);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!cleanedDestination) {
+    if (!isVoicemailType && !cleanedDestination) {
       showError("Veuillez saisir un numéro ou utiliser le bouton de désactivation.");
-      return;
-    }
-
-    if (!isNumberValid) {
-      showError("Le numéro de destination semble invalide.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await onUpdate(type, cleanedDestination);
+      // Pour le répondeur, on utilise le numéro actuel ou une chaîne vide si OVH le gère par défaut
+      await onUpdate(type, isVoicemailType ? (currentOption.destination || "voicemail") : cleanedDestination);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDisable = async () => {
-    if (!currentOption.active && !currentOption.destination) return;
+    if (!currentOption.active) return;
 
     if (!window.confirm(`Êtes-vous sûr de vouloir désactiver le ${label} ?`)) {
       return;
@@ -88,57 +91,48 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
     setIsSubmitting(true);
     try {
       await onUpdate(type, null);
-      setDestination(""); // Clear input after disabling
+      if (!isVoicemailType) setDestination("");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSelectChange = (value: string) => {
-    // Set the destination from the selected saved number
     setDestination(value);
-    setIsSavingNew(false); // Hide quick save form if a saved number is selected
+    setIsSavingNew(false);
   };
 
   const handleQuickSave = () => {
-    if (!isNumberValid) {
-        showError("Veuillez saisir un numéro valide avant de l'enregistrer.");
-        return;
-    }
     setIsSavingNew(true);
-    setNewSavedName(""); // Reset name field
+    setNewSavedName("");
   };
 
   const handleSaveNewNumber = (e: React.FormEvent) => {
     e.preventDefault();
     if (addSavedNumber(newSavedName, cleanedDestination)) {
-        // Crucial: Update the local destination state to the cleaned version
-        // This ensures the Select component correctly identifies the newly saved number
         setDestination(cleanedDestination); 
         setIsSavingNew(false);
         setNewSavedName("");
     }
   };
   
-  // Determine the current value for the Select component
   const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
 
   const handleRemoveSavedNumber = (id: string) => {
     const numberToRemove = savedNumbers.find(n => n.id === id)?.number;
     removeSavedNumber(id);
-    // If the deleted number was the current destination, clear the input
     if (destination === numberToRemove) {
         setDestination("");
     }
   };
 
   return (
-    <Card className="p-4 shadow-lg">
+    <Card className="p-4 shadow-lg flex flex-col h-full">
       <h3 className="text-md font-semibold mb-3">{label}</h3>
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="space-y-3 flex-grow">
         
-        {/* 1. Quick Select */}
-        {savedNumbers.length > 0 && (
+        {/* 1. Quick Select (Masqué pour le répondeur) */}
+        {!isVoicemailType && savedNumbers.length > 0 && (
           <div className="space-y-1">
             <Label htmlFor={`select-dest-${type}`}>Numéros enregistrés</Label>
             <Select onValueChange={handleSelectChange} value={currentSavedNumber}>
@@ -155,7 +149,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <Separator />
+            <Separator className="my-2" />
           </div>
         )}
 
@@ -164,23 +158,28 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
           <Label htmlFor={`dest-${type}`}>Numéro de destination</Label>
           <Input
             id={`dest-${type}`}
-            type="tel"
-            placeholder="Ex: 0033612345678"
-            value={destination}
+            type="text"
+            placeholder={isVoicemailType ? "" : "Ex: 0033612345678"}
+            value={isVoicemailType ? "Répondeur" : destination}
             onChange={(e) => {
-                setDestination(e.target.value);
-                setIsSavingNew(false); // Hide quick save form if user starts typing
+                if (!isVoicemailType) {
+                    setDestination(e.target.value);
+                    setIsSavingNew(false);
+                }
             }}
-            disabled={disabled || isSubmitting}
-            className="w-full"
+            disabled={disabled || isSubmitting || isVoicemailType}
+            className={`w-full ${isVoicemailType ? "bg-gray-100 font-medium text-primary cursor-not-allowed" : ""}`}
+            readOnly={isVoicemailType}
           />
-          <p className="text-xs text-muted-foreground">
-            Format national (06...) ou international (00336...).
-          </p>
+          {!isVoicemailType && (
+            <p className="text-xs text-muted-foreground">
+              Format national (06...) ou international (00336...).
+            </p>
+          )}
         </div>
 
-        {/* 3. Quick Save Form */}
-        {isSavingNew && isNumberValid && (
+        {/* 3. Quick Save Form (Masqué pour le répondeur) */}
+        {!isVoicemailType && isSavingNew && isNumberValid && (
             <Card className="p-3 bg-gray-50 dark:bg-gray-900 border">
                 <form onSubmit={handleSaveNewNumber} className="space-y-2">
                     <Label htmlFor={`save-name-${type}`} className="text-xs font-semibold">
@@ -200,41 +199,42 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
                 </form>
             </Card>
         )}
+      </div>
 
-        {/* 4. Action Buttons */}
-        <div className="flex space-x-2 pt-2">
+      {/* 4. Action Buttons */}
+      <div className="flex space-x-2 pt-4 mt-auto">
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          className="flex-1 bg-primary hover:bg-primary/90"
+          disabled={disabled || isSubmitting || !canSubmit}
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {isSubmitting ? "Sauvegarde..." : currentOption.active ? "Déjà activé" : "Activer"}
+        </Button>
+        
+        {canSaveQuick && !isSavingNew && (
           <Button
-            type="submit"
-            className="flex-1 bg-primary hover:bg-primary/90"
-            disabled={disabled || isSubmitting || !canSubmit}
+              type="button"
+              variant="outline"
+              onClick={handleQuickSave}
+              disabled={disabled || isSubmitting}
+              title="Enregistrer ce numéro"
           >
-            <Save className="w-4 h-4 mr-2" />
-            {isSubmitting ? "Sauvegarde..." : "Appliquer le renvoi"}
+              <Plus className="w-4 h-4" />
           </Button>
-          
-          {canSaveQuick && !isSavingNew && (
-            <Button
-                type="button"
-                variant="outline"
-                onClick={handleQuickSave}
-                disabled={disabled || isSubmitting}
-                title="Enregistrer ce numéro pour une sélection rapide future"
-            >
-                <Plus className="w-4 h-4" />
-            </Button>
-          )}
+        )}
 
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDisable}
-            disabled={disabled || isSubmitting || (!currentOption.active && !currentOption.destination)}
-            title="Désactiver le renvoi"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-      </form>
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={handleDisable}
+          disabled={disabled || isSubmitting || !currentOption.active}
+          title="Désactiver le renvoi"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </Card>
   );
 };
