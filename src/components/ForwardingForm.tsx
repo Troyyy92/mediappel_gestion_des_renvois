@@ -48,7 +48,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmType, setConfirmType] = useState<"activate" | "deactivate">("activate");
   
-  // État pour la confirmation de suppression
+  // État pour la confirmation de suppression (maintenu pour la suppression future si nécessaire, mais non utilisé ici)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [numberToDelete, setNumberToDelete] = useState<SavedNumber | null>(null);
 
@@ -126,24 +126,8 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
 
   const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
 
-  const handleRemoveSavedNumber = (id: string) => {
-    const numberToRemove = savedNumbers.find(n => n.id === id);
-    if (numberToRemove) {
-      setNumberToDelete(numberToRemove);
-      setShowDeleteConfirm(true);
-    }
-  };
-
-  const confirmDeleteNumber = () => {
-    if (numberToDelete) {
-      removeSavedNumber(numberToDelete.id);
-      if (destination === numberToDelete.number) {
-        setDestination("");
-      }
-      setShowDeleteConfirm(false);
-      setNumberToDelete(null);
-    }
-  };
+  // Suppression de la logique de suppression du numéro enregistré ici, car elle n'est plus déclenchée par le SelectItem.
+  // Les états showDeleteConfirm et numberToDelete sont conservés mais non utilisés.
 
   return (
     <>
@@ -177,7 +161,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
                     <SavedNumberSelectItem
                       key={num.id}
                       num={num}
-                      onRemove={handleRemoveSavedNumber}
                     />
                   ))}
                 </SelectContent>
@@ -272,27 +255,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
               className={confirmType === "activate" ? "bg-primary" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
             >
               Confirmer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer le numéro enregistré "{numberToDelete?.name}" ({numberToDelete?.number}) ?
-              Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteNumber}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
