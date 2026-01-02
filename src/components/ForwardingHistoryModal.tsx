@@ -79,6 +79,15 @@ const ForwardingHistoryModal = () => {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
+  const translateForwardingType = (type: string) => {
+    const translations: Record<string, string> = {
+      unconditional: "Inconditionnel",
+      busy: "Sur occupation",
+      noReply: "Sur non-réponse",
+    };
+    return translations[type] || type;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -136,7 +145,7 @@ const ForwardingHistoryModal = () => {
                         {item.action_type === "activation" ? "Activé" : "Désactivé"}
                       </Badge>
                       <div className="text-[10px] text-muted-foreground mt-1 font-medium">
-                        {item.forwarding_type}
+                        {translateForwardingType(item.forwarding_type)}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-xs">
