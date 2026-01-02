@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { SipLineOptions, SipLine, ForwardingType } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
 import { ovhClient } from "@/integrations/ovh/client";
@@ -35,6 +35,9 @@ const useSipOptions = () => {
   const [availableLines, setAvailableLines] = useState<SipLine[]>([]);
   const [selectedLine, setSelectedLine] = useState<SipLine>(EMPTY_LINE);
   const [error, setError] = useState<string | null>(null);
+  
+  // Utilisation d'une ref pour éviter les boucles infinies lors de l'auto-sélection
+  const hasAutoSelected = useRef(false);
 
   // Récupérer les lignes SIP disponibles
   const fetchLines = useCallback(async (showToast = true) => {
@@ -44,10 +47,10 @@ const useSipOptions = () => {
       const lines = await ovhClient.getSipLines();
       setAvailableLines(lines);
       
-      // Si aucune ligne n'est sélectionnée et qu'il y a des lignes disponibles,
-      // sélectionner la première par défaut
-      if (!selectedLine.lineNumber && lines.length > 0) {
+      // Auto-sélection de la première ligne si rien n'est sélectionné
+      if (!hasAutoSelected.current && lines.length > 0) {
         setSelectedLine(lines[0]);
+        hasAutoSelected.current = true;
       }
       
       if (showToast) {
@@ -61,11 +64,11 @@ const useSipOptions = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedLine.lineNumber]);
+  }, []); // Retrait de selectedLine.lineNumber des dépendances
 
   // Récupérer les options pour une ligne spécifique
   const fetchOptions = useCallback(async (line: SipLine) => {
-    if (!line.lineNumber) {
+    if (!line || !line.lineNumber) {
       setOptions(EMPTY_OPTIONS);
       return;
     }
@@ -102,7 +105,6 @@ const useSipOptions = () => {
       };
 
       setOptions(formattedOptions);
-      showSuccess(`Paramètres chargés pour la ligne ${line.description}`);
     } catch (error: any) {
       console.error("Error fetching options:", error);
       const errorMessage = error.message || "Erreur lors du chargement des paramètres de la ligne";
@@ -114,21 +116,20 @@ const useSipOptions = () => {
     }
   }, []);
 
-  // Charger les lignes au démarrage
+  // Charger les lignes au démarrage uniquement
   useEffect(() => {
     fetchLines();
   }, [fetchLines]);
 
   // Charger les options quand une ligne est sélectionnée
   useEffect(() => {
-    if (selectedLine.lineNumber) {
+    if (selectedLine && selectedLine.lineNumber) {
       fetchOptions(selectedLine);
     } else {
       setOptions(EMPTY_OPTIONS);
     }
   }, [selectedLine, fetchOptions]);
 
-  // Mettre à jour un renvoi
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
     if (!selectedLine.lineNumber) return;
 
@@ -154,14 +155,11 @@ const useSipOptions = () => {
       }));
     } catch (error: any) {
       console.error("Error updating forwarding:", error);
-      const errorMessage = error.message || `Erreur lors de la mise à jour du renvoi ${type}`;
-      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Mettre à jour le délai de non-réponse
   const updateNoReplyTimer = async (timer: number) => {
     if (!selectedLine.lineNumber) return;
 
@@ -179,14 +177,11 @@ const useSipOptions = () => {
       }));
     } catch (error: any) {
       console.error("Error updating no reply timer:", error);
-      const errorMessage = error.message || "Erreur lors de la mise à jour du délai de non-réponse";
-      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Réinitialiser tous les renvois
   const resetAllForwarding = async () => {
     if (!selectedLine.lineNumber) return;
 
@@ -200,38 +195,26 @@ const useSipOptions = () => {
       setOptions(prev => ({
         ...prev,
         forwarding: {
-          unconditional: {
-            type: "unconditional",
-            active: false,
-            destination: undefined,
-          },
-          busy: {
-            type: "busy",
-            active: false,
-            destination: undefined,
-          },
-          noReply: {
-            type: "noReply",
-            active: false,
-            destination: undefined,
-          },
+          unconditional: { type: "unconditional", active: false },
+          busy: { type: "busy", active: false },
+          noReply: { type: "noReply", active: false },
         },
       }));
     } catch (error: any) {
       console.error("Error resetting all forwarding:", error);
-      const errorMessage = error.message || "Erreur lors de la réinitialisation des renvois";
-      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLineChange = (lineNumber: string) => {
+    if (!lineNumber) {
+      setSelectedLine(EMPTY_LINE);
+      return;
+    }
     const line = availableLines.find(l => l.lineNumber === lineNumber);
     if (line) {
       setSelectedLine(line);
-    } else {
-      setSelectedLine(EMPTY_LINE);
     }
   };
 
