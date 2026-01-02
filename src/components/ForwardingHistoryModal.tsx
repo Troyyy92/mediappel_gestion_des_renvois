@@ -107,8 +107,8 @@ const ForwardingHistoryModal = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Utilisateur</TableHead>
                 <TableHead>Origine</TableHead>
-                <TableHead>Destination</TableHead>
                 <TableHead>Action</TableHead>
+                <TableHead>Destination</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -128,9 +128,6 @@ const ForwardingHistoryModal = () => {
                       {item.profiles?.email || "Utilisateur"}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.line_number}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {item.destination_number === "voicemail" ? "" : (item.destination_number || "")}
-                    </TableCell>
                     <TableCell>
                       <Badge 
                         variant={item.action_type === "activation" ? "default" : "destructive"} 
@@ -141,6 +138,9 @@ const ForwardingHistoryModal = () => {
                       <div className="text-[10px] text-muted-foreground mt-1 font-medium">
                         {item.forwarding_type}
                       </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {item.destination_number === "voicemail" ? "" : (item.destination_number || "")}
                     </TableCell>
                   </TableRow>
                 ))
