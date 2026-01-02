@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { SipLineOptions, SipLine, ForwardingType } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
 import { ovhClient } from "@/integrations/ovh/client";
+import { supabase } from "@/integrations/supabase/client";
+import useAuth from "./use-auth";
 
 const EMPTY_OPTIONS: SipLineOptions = {
   lineNumber: "",
@@ -24,6 +26,7 @@ const EMPTY_OPTIONS: SipLineOptions = {
 };
 
 const useSipOptions = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [options, setOptions] = useState<SipLineOptions>(EMPTY_OPTIONS);
   const [availableLines, setAvailableLines] = useState<SipLine[]>([]);
@@ -102,10 +105,20 @@ const useSipOptions = () => {
   }, [selectedLine, fetchOptions]);
 
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
-    if (!selectedLine) return;
+    if (!selectedLine || !user) return;
     setIsLoading(true);
     try {
       await ovhClient.updateForwarding(selectedLine.serviceName, selectedLine.lineNumber, type, destination);
+      
+      // Enregistrement dans l'historique Supabase
+      await supabase.from('forwarding_history').insert({
+        user_id: user.id,
+        line_number: selectedLine.lineNumber,
+        destination_number: destination,
+        forwarding_type: type,
+        action_type: destination ? 'activation' : 'deactivation'
+      });
+
       setOptions(prev => ({
         ...prev,
         forwarding: {
@@ -113,6 +126,8 @@ const useSipOptions = () => {
           [type]: { ...prev.forwarding[type], active: !!destination, destination: destination || undefined },
         },
       }));
+    } catch (err) {
+      console.error("Error updating forwarding:", err);
     } finally {
       setIsLoading(false);
     }

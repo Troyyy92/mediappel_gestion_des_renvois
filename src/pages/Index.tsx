@@ -4,6 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import LineSelector from "@/components/LineSelector";
 import LineInfoCard from "@/components/LineInfoCard";
 import ForwardingForm from "@/components/ForwardingForm";
+import ForwardingHistoryModal from "@/components/ForwardingHistoryModal";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
@@ -45,11 +46,12 @@ const Index = () => {
         />
         
         <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h2 className="text-2xl font-semibold text-gray-800">
               Configuration de la Ligne
             </h2>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
+              <ForwardingHistoryModal />
               <Button
                 onClick={fetchOptions}
                 disabled={isLoading || !isLineSelected}
