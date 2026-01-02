@@ -22,10 +22,6 @@ const LineSelector: React.FC<LineSelectorProps> = ({
   onLineChange,
   disabled,
 }) => {
-  // Trouver la ligne sélectionnée pour l'affichage si besoin, 
-  // bien que SelectValue s'en occupe normalement via la valeur.
-  const currentLine = availableLines.find(l => l.lineNumber === selectedLineNumber);
-
   return (
     <div className="w-full max-w-md mx-auto mb-6">
       <Label htmlFor="line-selector" className="text-white mb-2 block text-left">
@@ -40,21 +36,15 @@ const LineSelector: React.FC<LineSelectorProps> = ({
           id="line-selector" 
           className="w-full bg-white text-gray-900 border-none shadow-md focus:ring-2 focus:ring-primary/50"
         >
-          <SelectValue placeholder="Choisir une ligne dans la liste...">
-            {currentLine ? `${currentLine.description} (${currentLine.lineNumber})` : undefined}
-          </SelectValue>
+          <SelectValue placeholder="Choisir une ligne dans la liste..." />
         </SelectTrigger>
-        <SelectContent className="max-h-[300px]">
+        <SelectContent>
           {availableLines.map((line) => (
             <SelectItem 
               key={`${line.serviceName}-${line.lineNumber}`} 
               value={line.lineNumber}
-              className="cursor-pointer"
             >
-              <div className="flex flex-col">
-                <span className="font-medium">{line.description}</span>
-                <span className="text-xs text-muted-foreground">{line.lineNumber}</span>
-              </div>
+              {line.description} ({line.lineNumber})
             </SelectItem>
           ))}
           {availableLines.length === 0 && !disabled && (
