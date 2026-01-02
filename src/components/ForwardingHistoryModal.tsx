@@ -37,20 +37,25 @@ const ForwardingHistoryModal = () => {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    const { data, count, error } = await supabase
-      .from("forwarding_history")
-      .select(`
-        *,
-        profiles:user_id (first_name, last_name)
-      `, { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(from, to);
+    try {
+      const { data, count, error } = await supabase
+        .from("forwarding_history")
+        .select(`
+          *,
+          profiles:user_id (first_name, last_name)
+        `, { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-    if (!error && data) {
-      setHistory(data);
+      if (error) throw error;
+      
+      setHistory(data || []);
       setTotalCount(count || 0);
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -60,6 +65,12 @@ const ForwardingHistoryModal = () => {
   }, [isOpen, page]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const getUserDisplayName = (item: any) => {
+    if (!item.profiles) return "Utilisateur";
+    const name = `${item.profiles.first_name || ""} ${item.profiles.last_name || ""}`.trim();
+    return name || "Utilisateur";
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -103,12 +114,12 @@ const ForwardingHistoryModal = () => {
                     <TableCell className="text-xs">
                       {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {item.profiles ? `${item.profiles.first_name || ""} ${item.profiles.last_name || ""}`.trim() || "Utilisateur" : "Utilisateur"}
+                    <TableCell className="font-medium text-sm">
+                      {getUserDisplayName(item)}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.line_number}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {item.destination_number === "voicemail" ? "Répondeur" : item.destination_number || "-"}
+                      {item.destination_number === "voicemail" || !item.destination_number ? "Répondeur" : item.destination_number}
                     </TableCell>
                     <TableCell>
                       <Badge variant={item.action_type === "activation" ? "default" : "destructive"} className="text-[10px] uppercase">
