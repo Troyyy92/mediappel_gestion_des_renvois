@@ -28,8 +28,8 @@ const LineSelector: React.FC<LineSelectorProps> = ({
         Ligne à configurer
       </Label>
       <Select
-        value={selectedLineNumber || undefined}
-        onValueChange={onLineChange}
+        value={selectedLineNumber || "none"}
+        onValueChange={(val) => onLineChange(val === "none" ? "" : val)}
         disabled={disabled || availableLines.length === 0}
       >
         <SelectTrigger 
@@ -39,6 +39,9 @@ const LineSelector: React.FC<LineSelectorProps> = ({
           <SelectValue placeholder="Choisir une ligne dans la liste..." />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="none" disabled className="hidden">
+            Choisir une ligne...
+          </SelectItem>
           {availableLines.map((line) => (
             <SelectItem 
               key={`${line.serviceName}-${line.lineNumber}`} 
@@ -47,11 +50,6 @@ const LineSelector: React.FC<LineSelectorProps> = ({
               {line.description} ({line.lineNumber})
             </SelectItem>
           ))}
-          {availableLines.length === 0 && !disabled && (
-            <div className="p-2 text-sm text-center text-muted-foreground">
-              Aucune ligne trouvée
-            </div>
-          )}
         </SelectContent>
       </Select>
     </div>

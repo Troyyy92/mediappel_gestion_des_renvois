@@ -63,7 +63,7 @@ class OvhApiClient {
     const body = options.body ? String(options.body) : "";
     
     if (!this.appKey || !this.appSecret || !this.consumerKey) {
-      throw new Error("OVH API keys are missing. Please check your environment variables.");
+      throw new Error("Clés API OVH manquantes.");
     }
     
     const timestamp = Math.round(Date.now() / 1000).toString();
@@ -87,7 +87,6 @@ class OvhApiClient {
     };
     
     try {
-      console.log(`Making request to: ${url}`);
       const response = await fetch(url, config);
       
       if (!response.ok) {
@@ -95,14 +94,12 @@ class OvhApiClient {
         try {
           errorData = await response.json();
         } catch (e) {
-          throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+          throw new Error(`Erreur HTTP: ${response.status}`);
         }
-        throw new Error(`OVH API Error: ${errorData.message} (${errorData.httpCode})`);
+        throw new Error(errorData.message || `Erreur API OVH (${response.status})`);
       }
       
-      const data = await response.json();
-      console.log(`Response from ${url}:`, data);
-      return data;
+      return await response.json();
     } catch (error) {
       console.error("OVH API Request failed:", error);
       throw error;
@@ -111,36 +108,31 @@ class OvhApiClient {
 
   async getSipLines(): Promise<OvhSipLine[]> {
     try {
-      if (!this.appKey || !this.appSecret || !this.consumerKey) {
-        throw new Error("OVH API keys are missing. Please check your environment variables.");
-      }
-      
       const billingAccounts: string[] = await this.makeRequest("/telephony");
-      console.log("Billing accounts:", billingAccounts);
-      
       const allLines: OvhSipLine[] = [];
       
       for (const billingAccount of billingAccounts) {
         try {
           const lines: string[] = await this.makeRequest(`/telephony/${billingAccount}/line`);
-          console.log(`Lines for ${billingAccount}:`, lines);
           
-          for (const lineNumber of lines) {
+          for (const lineId of lines) {
             try {
-              const lineDetails: any = await this.makeRequest(`/telephony/${billingAccount}/line/${lineNumber}`);
-              console.log(`Line details for ${lineNumber}:`, lineDetails);
+              const details: any = await this.makeRequest(`/telephony/${billingAccount}/line/${lineId}`);
+              
+              // On utilise lineId (qui est le numéro) si details.lineNumber est absent
+              const finalNumber = details.lineNumber || lineId;
               
               allLines.push({
                 serviceName: billingAccount,
-                lineNumber: lineDetails.lineNumber,
-                description: lineDetails.description || `Ligne ${lineDetails.lineNumber}`,
+                lineNumber: finalNumber,
+                description: details.description || `Ligne ${finalNumber}`,
               });
-            } catch (lineError) {
-              console.warn(`Failed to fetch details for line ${lineNumber}:`, lineError);
+            } catch (err) {
+              console.warn(`Détails indisponibles pour ${lineId}`);
             }
           }
-        } catch (accountError) {
-          console.warn(`Failed to fetch lines for billing account ${billingAccount}:`, accountError);
+        } catch (err) {
+          console.warn(`Erreur pour le compte ${billingAccount}`);
         }
       }
       
@@ -152,119 +144,61 @@ class OvhApiClient {
   }
 
   async getSipLineOptions(serviceName: string, lineNumber: string): Promise<OvhForwardingOptions> {
-    try {
-      if (!this.appKey || !this.appSecret || !this.consumerKey) {
-        throw new Error("OVH API keys are missing. Please check your environment variables.");
-      }
-      
-      const options = await this.makeRequest<any>(`/telephony/${serviceName}/line/${lineNumber}/options`);
-      
-      return {
-        forwarding: {
-          unconditional: {
-            active: options.forwardUnconditional || false,
-            destination: options.forwardUnconditionalNumber,
-          },
-          busy: {
-            active: options.forwardBusy || false,
-            destination: options.forwardBusyNumber,
-          },
-          noReply: {
-            active: options.forwardNoReply || false,
-            destination: options.forwardNoReplyNumber,
-          },
+    const options = await this.makeRequest<any>(`/telephony/${serviceName}/line/${lineNumber}/options`);
+    
+    return {
+      forwarding: {
+        unconditional: {
+          active: options.forwardUnconditional || false,
+          destination: options.forwardUnconditionalNumber,
         },
-        noReplyTimer: options.forwardNoReplyDelay || 20,
-      };
-    } catch (error) {
-      console.error(`Error fetching options for line ${lineNumber}:`, error);
-      throw error;
-    }
+        busy: {
+          active: options.forwardBusy || false,
+          destination: options.forwardBusyNumber,
+        },
+        noReply: {
+          active: options.forwardNoReply || false,
+          destination: options.forwardNoReplyNumber,
+        },
+      },
+      noReplyTimer: options.forwardNoReplyDelay || 20,
+    };
   }
 
   async updateForwarding(serviceName: string, lineNumber: string, type: "unconditional" | "busy" | "noReply", destination: string | null): Promise<void> {
-    try {
-      if (!this.appKey || !this.appSecret || !this.consumerKey) {
-        throw new Error("OVH API keys are missing. Please check your environment variables.");
-      }
-      
-      const endpoint = `/telephony/${serviceName}/line/${lineNumber}/options`;
-      
-      let updateData: any = {};
-      
-      if (type === "unconditional") {
-        updateData = {
-          forwardUnconditional: !!destination,
-          forwardUnconditionalNumber: destination || "",
-        };
-      } else if (type === "busy") {
-        updateData = {
-          forwardBusy: !!destination,
-          forwardBusyNumber: destination || "",
-        };
-      } else if (type === "noReply") {
-        updateData = {
-          forwardNoReply: !!destination,
-          forwardNoReplyNumber: destination || "",
-        };
-      }
-      
-      await this.makeRequest(endpoint, {
-        method: "PUT",
-        body: JSON.stringify(updateData),
-      });
-      
-      if (destination) {
-        showSuccess(`Renvoi ${type} activé vers ${destination}`);
-      } else {
-        showSuccess(`Renvoi ${type} désactivé`);
-      }
-    } catch (error) {
-      console.error(`Error updating forwarding for ${type}:`, error);
-      showError(`Erreur lors de la mise à jour du renvoi ${type}`);
-      throw error;
+    const endpoint = `/telephony/${serviceName}/line/${lineNumber}/options`;
+    let updateData: any = {};
+    
+    if (type === "unconditional") {
+      updateData = { forwardUnconditional: !!destination, forwardUnconditionalNumber: destination || "" };
+    } else if (type === "busy") {
+      updateData = { forwardBusy: !!destination, forwardBusyNumber: destination || "" };
+    } else if (type === "noReply") {
+      updateData = { forwardNoReply: !!destination, forwardNoReplyNumber: destination || "" };
     }
+    
+    await this.makeRequest(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(updateData),
+    });
+    
+    showSuccess(destination ? `Renvoi ${type} activé` : `Renvoi ${type} désactivé`);
   }
 
   async updateNoReplyTimer(serviceName: string, lineNumber: string, timer: number): Promise<void> {
-    try {
-      if (!this.appKey || !this.appSecret || !this.consumerKey) {
-        throw new Error("OVH API keys are missing. Please check your environment variables.");
-      }
-      
-      const endpoint = `/telephony/${serviceName}/line/${lineNumber}/options`;
-      
-      await this.makeRequest(endpoint, {
-        method: "PUT",
-        body: JSON.stringify({
-          forwardNoReplyDelay: timer,
-        }),
-      });
-      
-      showSuccess(`Délai de non-réponse mis à jour à ${timer} secondes`);
-    } catch (error) {
-      console.error("Error updating no reply timer:", error);
-      showError("Erreur lors de la mise à jour du délai de non-réponse");
-      throw error;
-    }
+    const endpoint = `/telephony/${serviceName}/line/${lineNumber}/options`;
+    await this.makeRequest(endpoint, {
+      method: "PUT",
+      body: JSON.stringify({ forwardNoReplyDelay: timer }),
+    });
+    showSuccess(`Délai mis à jour : ${timer}s`);
   }
 
   async resetAllForwarding(serviceName: string, lineNumber: string): Promise<void> {
-    try {
-      if (!this.appKey || !this.appSecret || !this.consumerKey) {
-        throw new Error("OVH API keys are missing. Please check your environment variables.");
-      }
-      
-      await this.updateForwarding(serviceName, lineNumber, "unconditional", null);
-      await this.updateForwarding(serviceName, lineNumber, "busy", null);
-      await this.updateForwarding(serviceName, lineNumber, "noReply", null);
-      
-      showSuccess("Tous les renvois ont été désactivés");
-    } catch (error) {
-      console.error("Error resetting all forwarding:", error);
-      showError("Erreur lors de la réinitialisation des renvois");
-      throw error;
-    }
+    await this.updateForwarding(serviceName, lineNumber, "unconditional", null);
+    await this.updateForwarding(serviceName, lineNumber, "busy", null);
+    await this.updateForwarding(serviceName, lineNumber, "noReply", null);
+    showSuccess("Tous les renvois désactivés");
   }
 }
 
