@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SipLineOptions } from "@/types/telephony";
@@ -8,21 +10,29 @@ interface LineInfoCardProps {
   options: SipLineOptions;
 }
 
-const ForwardingStatus: React.FC<{ active: boolean; destination?: string }> = ({
+const ForwardingStatus: React.FC<{ active: boolean; destination?: string; type: string; lineNumber: string }> = ({
   active,
   destination,
-}) => (
-  <div className="flex items-center space-x-2">
-    {active ? (
-      <CheckCircle className="w-4 h-4 text-green-500" />
-    ) : (
-      <XCircle className="w-4 h-4 text-gray-400" />
-    )}
-    <span className="font-mono text-sm">
-      {active ? destination : "Non configuré"}
-    </span>
-  </div>
-);
+  type,
+  lineNumber
+}) => {
+  // On affiche "Répondeur" si le numéro de destination correspond au numéro de la ligne (cas typique OVH pour le répondeur)
+  // ou si c'est un renvoi forcé sur répondeur.
+  const isVoicemail = destination === lineNumber || destination === "voicemail" || (active && (type === "busy" || type === "noReply"));
+  
+  return (
+    <div className="flex items-center space-x-2">
+      {active ? (
+        <CheckCircle className="w-4 h-4 text-green-500" />
+      ) : (
+        <XCircle className="w-4 h-4 text-gray-400" />
+      )}
+      <span className="font-mono text-sm">
+        {active ? (isVoicemail ? "Répondeur" : destination) : "Non configuré"}
+      </span>
+    </div>
+  );
+};
 
 const LineInfoCard: React.FC<LineInfoCardProps> = ({ options }) => {
   const { forwarding, noReplyTimer, lineNumber } = options;
@@ -40,18 +50,24 @@ const LineInfoCard: React.FC<LineInfoCardProps> = ({ options }) => {
           <ForwardingStatus
             active={forwarding.unconditional.active}
             destination={forwarding.unconditional.destination}
+            type="unconditional"
+            lineNumber={lineNumber}
           />
 
           <p className="font-medium text-gray-600">Renvoi sur Occupation:</p>
           <ForwardingStatus
             active={forwarding.busy.active}
             destination={forwarding.busy.destination}
+            type="busy"
+            lineNumber={lineNumber}
           />
 
           <p className="font-medium text-gray-600">Renvoi sur Non-réponse:</p>
           <ForwardingStatus
             active={forwarding.noReply.active}
             destination={forwarding.noReply.destination}
+            type="noReply"
+            lineNumber={lineNumber}
           />
         </div>
 
