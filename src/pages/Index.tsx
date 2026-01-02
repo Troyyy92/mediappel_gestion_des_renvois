@@ -18,7 +18,7 @@ const Index = () => {
     isLoading,
     options,
     availableLines,
-    selectedLine,
+    selectedLineNumber,
     handleLineChange,
     fetchOptions,
     updateForwarding,
@@ -48,7 +48,7 @@ const Index = () => {
         
         <LineSelector
           availableLines={availableLines}
-          selectedLineNumber={selectedLine.lineNumber}
+          selectedLineNumber={selectedLineNumber}
           onLineChange={handleLineChange}
           disabled={isLoading}
         />

@@ -3,12 +3,6 @@ import { SipLineOptions, SipLine, ForwardingType } from "@/types/telephony";
 import { showSuccess, showError } from "@/utils/toast";
 import { ovhClient } from "@/integrations/ovh/client";
 
-const EMPTY_LINE: SipLine = {
-  serviceName: "",
-  lineNumber: "",
-  description: "Sélectionner une ligne...",
-};
-
 const EMPTY_OPTIONS: SipLineOptions = {
   lineNumber: "",
   serviceName: "",
@@ -33,12 +27,9 @@ const useSipOptions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [options, setOptions] = useState<SipLineOptions>(EMPTY_OPTIONS);
   const [availableLines, setAvailableLines] = useState<SipLine[]>([]);
-  const [selectedLine, setSelectedLine] = useState<SipLine>(EMPTY_LINE);
+  const [selectedLine, setSelectedLine] = useState<SipLine | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Utilisation d'une ref pour éviter les boucles infinies lors de l'auto-sélection
-  const hasAutoSelected = useRef(false);
-
   // Récupérer les lignes SIP disponibles
   const fetchLines = useCallback(async (showToast = true) => {
     setIsLoading(true);
@@ -46,12 +37,6 @@ const useSipOptions = () => {
     try {
       const lines = await ovhClient.getSipLines();
       setAvailableLines(lines);
-      
-      // Auto-sélection de la première ligne si rien n'est sélectionné
-      if (!hasAutoSelected.current && lines.length > 0) {
-        setSelectedLine(lines[0]);
-        hasAutoSelected.current = true;
-      }
       
       if (showToast) {
         showSuccess("Lignes téléphoniques chargées");
@@ -64,7 +49,7 @@ const useSipOptions = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // Retrait de selectedLine.lineNumber des dépendances
+  }, []);
 
   // Récupérer les options pour une ligne spécifique
   const fetchOptions = useCallback(async (line: SipLine) => {
@@ -123,7 +108,7 @@ const useSipOptions = () => {
 
   // Charger les options quand une ligne est sélectionnée
   useEffect(() => {
-    if (selectedLine && selectedLine.lineNumber) {
+    if (selectedLine) {
       fetchOptions(selectedLine);
     } else {
       setOptions(EMPTY_OPTIONS);
@@ -131,7 +116,7 @@ const useSipOptions = () => {
   }, [selectedLine, fetchOptions]);
 
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
-    if (!selectedLine.lineNumber) return;
+    if (!selectedLine) return;
 
     setIsLoading(true);
     try {
@@ -161,7 +146,7 @@ const useSipOptions = () => {
   };
 
   const updateNoReplyTimer = async (timer: number) => {
-    if (!selectedLine.lineNumber) return;
+    if (!selectedLine) return;
 
     setIsLoading(true);
     try {
@@ -183,7 +168,7 @@ const useSipOptions = () => {
   };
 
   const resetAllForwarding = async () => {
-    if (!selectedLine.lineNumber) return;
+    if (!selectedLine) return;
 
     setIsLoading(true);
     try {
@@ -208,27 +193,21 @@ const useSipOptions = () => {
   };
 
   const handleLineChange = (lineNumber: string) => {
-    if (!lineNumber) {
-      setSelectedLine(EMPTY_LINE);
-      return;
-    }
     const line = availableLines.find(l => l.lineNumber === lineNumber);
-    if (line) {
-      setSelectedLine(line);
-    }
+    setSelectedLine(line || null);
   };
 
   return {
     isLoading,
     options,
     availableLines,
-    selectedLine,
+    selectedLineNumber: selectedLine?.lineNumber || "",
     handleLineChange,
-    fetchOptions: () => fetchOptions(selectedLine),
+    fetchOptions: () => selectedLine && fetchOptions(selectedLine),
     updateForwarding,
     updateNoReplyTimer,
     resetAllForwarding,
-    isLineSelected: !!selectedLine.lineNumber,
+    isLineSelected: !!selectedLine,
     refreshLines: fetchLines,
     error,
   };
