@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { ForwardingOption, ForwardingType, SavedNumber } from "@/types/telephony";
 import { showError } from "@/utils/toast";
-import { Trash2, Save, Plus, Check } from "lucide-react";
+import { Trash2, Save, Plus, Check, RotateCcw } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -36,6 +36,8 @@ interface ForwardingFormProps {
   savedNumbers: SavedNumber[];
   addSavedNumber: (name: string, number: string) => boolean;
   removeSavedNumber: (id: string) => void;
+  onUndo?: () => Promise<void>;
+  canUndo?: boolean;
 }
 
 const ForwardingForm: React.FC<ForwardingFormProps> = ({
@@ -47,6 +49,8 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   savedNumbers,
   addSavedNumber,
   removeSavedNumber,
+  onUndo,
+  canUndo = false,
 }) => {
   const isVoicemailType = type === "busy" || type === "noReply";
   const [destination, setDestination] = useState(currentOption.destination || "");
@@ -148,7 +152,23 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   return (
     <>
       <Card className="p-4 shadow-lg flex flex-col h-full">
-        <h3 className="text-md font-semibold mb-3">{label}</h3>
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-md font-semibold">{label}</h3>
+          {type === "unconditional" && canUndo && onUndo && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onUndo}
+              disabled={disabled || isSubmitting}
+              className="h-7 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+              title="Annuler la dernière action"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Annuler
+            </Button>
+          )}
+        </div>
+        
         <div className="space-y-3 flex-grow">
           {!isVoicemailType && savedNumbers.length > 0 && (
             <div className="space-y-1">

@@ -33,6 +33,9 @@ const useSipOptions = () => {
   const [selectedLine, setSelectedLine] = useState<SipLine | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // État pour mémoriser la configuration précédente du renvoi inconditionnel
+  const [previousUnconditional, setPreviousUnconditional] = useState<{ active: boolean, destination: string | null } | null>(null);
+  
   const fetchLines = useCallback(async (showToast = true) => {
     setIsLoading(true);
     setError(null);
@@ -84,6 +87,8 @@ const useSipOptions = () => {
         },
         noReplyTimer: ovhOptions.noReplyTimer,
       });
+      // Réinitialiser l'historique d'annulation lors du changement de ligne ou rechargement complet
+      setPreviousUnconditional(null);
     } catch (error: any) {
       console.error("Error fetching options:", error);
       showError("Erreur lors du chargement des paramètres de la ligne");
@@ -122,6 +127,15 @@ const useSipOptions = () => {
 
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
     if (!selectedLine || !user) return;
+    
+    // Mémoriser l'état actuel avant mise à jour si c'est de l'inconditionnel
+    if (type === "unconditional") {
+      setPreviousUnconditional({
+        active: options.forwarding.unconditional.active,
+        destination: options.forwarding.unconditional.destination || null
+      });
+    }
+
     setIsLoading(true);
     try {
       await ovhClient.updateForwarding(selectedLine.serviceName, selectedLine.lineNumber, type, destination);
@@ -138,9 +152,22 @@ const useSipOptions = () => {
       }));
     } catch (err) {
       console.error("Error updating forwarding:", err);
+      // En cas d'erreur, on annule la mémorisation du précédent
+      if (type === "unconditional") setPreviousUnconditional(null);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const undoUnconditional = async () => {
+    if (!previousUnconditional || !selectedLine) return;
+    
+    const targetDest = previousUnconditional.active ? previousUnconditional.destination : null;
+    await updateForwarding("unconditional", targetDest);
+    
+    // Une fois annulé, on vide l'historique d'annulation
+    setPreviousUnconditional(null);
+    showSuccess("Action annulée : configuration précédente rétablie.");
   };
 
   const updateNoReplyTimer = async (timer: number) => {
@@ -173,6 +200,7 @@ const useSipOptions = () => {
           noReply: { type: "noReply", active: false },
         },
       }));
+      setPreviousUnconditional(null);
     } finally {
       setIsLoading(false);
     }
@@ -193,6 +221,8 @@ const useSipOptions = () => {
     updateForwarding,
     updateNoReplyTimer,
     resetAllForwarding,
+    undoUnconditional,
+    canUndoUnconditional: !!previousUnconditional,
     isLineSelected: !!selectedLine,
     refreshLines: fetchLines,
     error,

@@ -22,6 +22,8 @@ const Index = () => {
     handleLineChange,
     fetchOptions,
     updateForwarding,
+    undoUnconditional,
+    canUndoUnconditional,
     isLineSelected,
     refreshLines,
     error,
@@ -155,6 +157,8 @@ const Index = () => {
                   savedNumbers={savedNumbers}
                   addSavedNumber={addNumber}
                   removeSavedNumber={removeNumber}
+                  onUndo={undoUnconditional}
+                  canUndo={canUndoUnconditional}
                 />
                 <ForwardingForm
                   type="busy"
