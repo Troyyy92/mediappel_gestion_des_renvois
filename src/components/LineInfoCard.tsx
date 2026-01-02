@@ -3,8 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SipLineOptions } from "@/types/telephony";
-import { CheckCircle, XCircle, Clock } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { CheckCircle, XCircle } from "lucide-react";
 
 interface LineInfoCardProps {
   options: SipLineOptions;
@@ -35,7 +34,7 @@ const ForwardingStatus: React.FC<{ active: boolean; destination?: string; type: 
 };
 
 const LineInfoCard: React.FC<LineInfoCardProps> = ({ options }) => {
-  const { forwarding, noReplyTimer, lineNumber } = options;
+  const { forwarding, lineNumber } = options;
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl border-l-4 border-l-primary">
@@ -69,18 +68,6 @@ const LineInfoCard: React.FC<LineInfoCardProps> = ({ options }) => {
             type="noReply"
             lineNumber={lineNumber}
           />
-        </div>
-
-        <Separator />
-
-        <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center space-x-2 text-sm font-medium text-gray-600">
-            <Clock className="w-4 h-4" />
-            <span>Délai Non-réponse:</span>
-          </div>
-          <span className="font-bold text-primary">
-            {noReplyTimer} secondes
-          </span>
         </div>
       </CardContent>
     </Card>
