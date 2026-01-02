@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -38,19 +39,34 @@ const ForwardingHistoryModal = () => {
     const to = from + PAGE_SIZE - 1;
 
     try {
+      // Note: On utilise explicitement le nom de la relation 'profiles'
       const { data, count, error } = await supabase
         .from("forwarding_history")
         .select(`
           *,
-          profiles:user_id (first_name, last_name)
+          profiles!inner (
+            first_name,
+            last_name
+          )
         `, { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      if (error) throw error;
-      
-      setHistory(data || []);
-      setTotalCount(count || 0);
+      if (error) {
+        // Fallback si la jointure échoue encore (sans les noms)
+        console.warn("Jointure échouée, tentative sans profils:", error);
+        const { data: simpleData, count: simpleCount } = await supabase
+          .from("forwarding_history")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .range(from, to);
+        
+        setHistory(simpleData || []);
+        setTotalCount(simpleCount || 0);
+      } else {
+        setHistory(data || []);
+        setTotalCount(count || 0);
+      }
     } catch (err) {
       console.error("Error fetching history:", err);
     } finally {
@@ -88,6 +104,9 @@ const ForwardingHistoryModal = () => {
               <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             </Button>
           </DialogTitle>
+          <DialogDescription>
+            Consultez les dernières modifications apportées aux renvois d'appels.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto mt-4">
