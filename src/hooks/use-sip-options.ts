@@ -104,20 +104,30 @@ const useSipOptions = () => {
     }
   }, [selectedLine, fetchOptions]);
 
+  const logToHistory = async (type: ForwardingType, destination: string | null) => {
+    if (!selectedLine || !user) return;
+    
+    const { error } = await supabase.from('forwarding_history').insert({
+      user_id: user.id,
+      line_number: selectedLine.lineNumber,
+      destination_number: destination,
+      forwarding_type: type,
+      action_type: destination ? 'activation' : 'deactivation'
+    });
+
+    if (error) {
+      console.error("Erreur lors de l'enregistrement dans l'historique:", error);
+    }
+  };
+
   const updateForwarding = async (type: ForwardingType, destination: string | null) => {
     if (!selectedLine || !user) return;
     setIsLoading(true);
     try {
       await ovhClient.updateForwarding(selectedLine.serviceName, selectedLine.lineNumber, type, destination);
       
-      // Enregistrement dans l'historique Supabase
-      await supabase.from('forwarding_history').insert({
-        user_id: user.id,
-        line_number: selectedLine.lineNumber,
-        destination_number: destination,
-        forwarding_type: type,
-        action_type: destination ? 'activation' : 'deactivation'
-      });
+      // Enregistrement dans l'historique
+      await logToHistory(type, destination);
 
       setOptions(prev => ({
         ...prev,
@@ -149,6 +159,12 @@ const useSipOptions = () => {
     setIsLoading(true);
     try {
       await ovhClient.resetAllForwarding(selectedLine.serviceName, selectedLine.lineNumber);
+      
+      // On logue la désactivation de tous les types
+      await logToHistory("unconditional", null);
+      await logToHistory("busy", null);
+      await logToHistory("noReply", null);
+
       setOptions(prev => ({
         ...prev,
         forwarding: {
