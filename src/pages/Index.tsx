@@ -4,7 +4,6 @@ import AppHeader from "@/components/AppHeader";
 import LineSelector from "@/components/LineSelector";
 import LineInfoCard from "@/components/LineInfoCard";
 import ForwardingForm from "@/components/ForwardingForm";
-import NoReplyTimerForm from "@/components/NoReplyTimerForm";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ const Index = () => {
     handleLineChange,
     fetchOptions,
     updateForwarding,
-    updateNoReplyTimer,
     isLineSelected,
     refreshLines,
     error,
@@ -176,16 +174,6 @@ const Index = () => {
                   addSavedNumber={addNumber}
                   removeSavedNumber={removeNumber}
                 />
-              </div>
-              
-              <div className="flex justify-center pt-4">
-                <Card className="w-full max-w-xs shadow-lg">
-                  <NoReplyTimerForm
-                    currentTimer={options.noReplyTimer}
-                    onUpdate={updateNoReplyTimer}
-                    disabled={isLoading || !isLineSelected}
-                  />
-                </Card>
               </div>
             </div>
           )}
