@@ -1,7 +1,7 @@
 import React from "react";
 import { SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { SavedNumber } from "@/types/telephony";
 
 interface SavedNumberSelectItemProps {
@@ -17,9 +17,9 @@ const SavedNumberSelectItem: React.FC<SavedNumberSelectItemProps> = ({ num, onRe
   };
 
   return (
-    <SelectItem value={num.number} className="p-0">
+    <SelectItem value={num.number} className="p-0 [&>span:first-child]:hidden pl-2">
       <div className="flex items-center justify-between w-full px-2 py-1.5">
-        <span className="flex-grow truncate">
+        <span className="flex-grow truncate text-sm">
           {num.name} ({num.number})
         </span>
         <Button
@@ -27,10 +27,10 @@ const SavedNumberSelectItem: React.FC<SavedNumberSelectItemProps> = ({ num, onRe
           variant="ghost"
           size="icon"
           onClick={handleRemove}
-          className="h-6 w-6 text-destructive hover:bg-destructive/10 ml-2"
+          className="h-7 w-7 text-destructive hover:bg-destructive/10 ml-2"
           title={`Supprimer ${num.name}`}
         >
-          <X className="w-3 h-3" />
+          <Trash2 className="w-4 h-4" />
         </Button>
       </div>
     </SelectItem>
