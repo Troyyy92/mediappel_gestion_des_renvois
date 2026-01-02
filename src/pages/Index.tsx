@@ -8,7 +8,7 @@ import NoReplyTimerForm from "@/components/NoReplyTimerForm";
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle, MousePointerClick, AlertCircle, HelpCircle } from "lucide-react";
+import { RefreshCw, MousePointerClick, AlertCircle, HelpCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
@@ -23,7 +23,6 @@ const Index = () => {
     fetchOptions,
     updateForwarding,
     updateNoReplyTimer,
-    resetAllForwarding,
     isLineSelected,
     refreshLines,
     error,
@@ -31,12 +30,6 @@ const Index = () => {
   
   const { savedNumbers, addNumber, removeNumber } = useSavedNumbers();
   const [showHelp, setShowHelp] = useState(false);
-
-  const handleReset = () => {
-    if (window.confirm("ATTENTION : Voulez-vous vraiment désactiver TOUS les renvois pour cette ligne ?")) {
-      resetAllForwarding();
-    }
-  };
 
   // Fonction pour déterminer si l'erreur est liée à l'authentification OVH
   const isOvhAuthError = error && error.includes("You must login first");
@@ -66,14 +59,6 @@ const Index = () => {
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Actualiser
-              </Button>
-              <Button
-                onClick={handleReset}
-                disabled={isLoading || !isLineSelected}
-                variant="destructive"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Réinitialiser Tout
               </Button>
             </div>
           </div>
