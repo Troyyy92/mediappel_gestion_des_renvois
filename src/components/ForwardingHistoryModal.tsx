@@ -39,22 +39,19 @@ const ForwardingHistoryModal = () => {
     const to = from + PAGE_SIZE - 1;
 
     try {
-      // Note: On utilise explicitement le nom de la relation 'profiles'
       const { data, count, error } = await supabase
         .from("forwarding_history")
         .select(`
           *,
-          profiles!inner (
-            first_name,
-            last_name
+          profiles (
+            email
           )
         `, { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
 
       if (error) {
-        // Fallback si la jointure échoue encore (sans les noms)
-        console.warn("Jointure échouée, tentative sans profils:", error);
+        console.warn("Erreur jointure, tentative sans profils:", error);
         const { data: simpleData, count: simpleCount } = await supabase
           .from("forwarding_history")
           .select("*", { count: "exact" })
@@ -81,12 +78,6 @@ const ForwardingHistoryModal = () => {
   }, [isOpen, page]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  const getUserDisplayName = (item: any) => {
-    if (!item.profiles) return "Utilisateur";
-    const name = `${item.profiles.first_name || ""} ${item.profiles.last_name || ""}`.trim();
-    return name || "Utilisateur";
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -133,19 +124,22 @@ const ForwardingHistoryModal = () => {
                     <TableCell className="text-xs">
                       {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
                     </TableCell>
-                    <TableCell className="font-medium text-sm">
-                      {getUserDisplayName(item)}
+                    <TableCell className="text-sm font-medium">
+                      {item.profiles?.email || "Utilisateur"}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.line_number}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {item.destination_number === "voicemail" || !item.destination_number ? "Répondeur" : item.destination_number}
+                      {item.destination_number === "voicemail" ? "" : (item.destination_number || "")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={item.action_type === "activation" ? "default" : "destructive"} className="text-[10px] uppercase">
-                        {item.action_type === "activation" ? "Activation" : "Désactivation"}
+                      <Badge 
+                        variant={item.action_type === "activation" ? "default" : "destructive"} 
+                        className="text-[10px] uppercase font-bold"
+                      >
+                        {item.action_type === "activation" ? "Activé" : "Désactivé"}
                       </Badge>
-                      <div className="text-[10px] text-muted-foreground mt-1">
-                        Type: {item.forwarding_type}
+                      <div className="text-[10px] text-muted-foreground mt-1 font-medium">
+                        {item.forwarding_type}
                       </div>
                     </TableCell>
                   </TableRow>
