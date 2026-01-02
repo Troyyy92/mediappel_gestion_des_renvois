@@ -237,7 +237,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
         {!isVoicemailType && (
           <SavedNumbersManager 
             savedNumbers={savedNumbers} 
-            removeNumber={removeNumber} 
+            removeNumber={removeSavedNumber} 
           />
         )}
       </Card>
