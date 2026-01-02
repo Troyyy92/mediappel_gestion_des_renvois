@@ -23,7 +23,6 @@ const useSavedNumbers = () => {
       setIsLoading(false);
       return;
     }
-
     setIsLoading(true);
     const { data, error } = await supabase
       .from('saved_numbers')
@@ -56,7 +55,6 @@ const useSavedNumbers = () => {
       showError("Vous devez être connecté pour enregistrer des numéros.");
       return false;
     }
-
     const cleanedNumber = number.trim().replace(/[^0-9+]/g, "");
     const trimmedName = name.trim();
 
@@ -64,14 +62,15 @@ const useSavedNumbers = () => {
       showError("Le nom et le numéro sont requis.");
       return false;
     }
+
     if (cleanedNumber.length < 3) {
       showError("Le numéro est trop court.");
       return false;
     }
-    
+
     if (savedNumbers.some(n => n.number === cleanedNumber)) {
-        showError("Ce numéro est déjà enregistré.");
-        return false;
+      showError("Ce numéro est déjà enregistré.");
+      return false;
     }
 
     const newNumberData = {
@@ -93,9 +92,9 @@ const useSavedNumbers = () => {
     }
 
     const newSavedNumber: SavedNumber = {
-        id: data.id,
-        name: data.name,
-        number: data.number,
+      id: data.id,
+      name: data.name,
+      number: data.number,
     };
 
     setSavedNumbers((prev) => [...prev, newSavedNumber]);

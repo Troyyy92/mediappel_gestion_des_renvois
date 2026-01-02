@@ -8,22 +8,8 @@ import { Card } from "@/components/ui/card";
 import { ForwardingOption, ForwardingType, SavedNumber } from "@/types/telephony";
 import { showError } from "@/utils/toast";
 import { Trash2, Save, Plus, Check, RotateCcw } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import SavedNumberSelectItem from "./SavedNumberSelectItem";
 
@@ -61,6 +47,10 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   // États pour la confirmation
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmType, setConfirmType] = useState<"activate" | "deactivate">("activate");
+  
+  // État pour la confirmation de suppression
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [numberToDelete, setNumberToDelete] = useState<SavedNumber | null>(null);
 
   useEffect(() => {
     setDestination(currentOption.destination || "");
@@ -73,10 +63,7 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
 
   const cleanedDestination = destination.trim().replace(/[^0-9+]/g, "");
   const isNumberValid = isVoicemailType ? true : isValidNumber(cleanedDestination);
-  const isDestinationChanged = isVoicemailType 
-    ? !currentOption.active 
-    : cleanedDestination !== (currentOption.destination || "");
-
+  const isDestinationChanged = isVoicemailType ? !currentOption.active : cleanedDestination !== (currentOption.destination || "");
   const canSubmit = isVoicemailType ? !currentOption.active : (isDestinationChanged && isNumberValid);
 
   const executeUpdate = async (dest: string | null) => {
@@ -98,7 +85,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
       showError("Veuillez saisir un numéro.");
       return;
     }
-
     if (type === "unconditional") {
       setConfirmType("activate");
       setShowConfirm(true);
@@ -109,7 +95,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
 
   const handleDisable = () => {
     if (!currentOption.active || isVoicemailType) return;
-    
     if (type === "unconditional") {
       setConfirmType("deactivate");
       setShowConfirm(true);
@@ -133,19 +118,30 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
   const handleSaveNewNumber = (e: React.FormEvent) => {
     e.preventDefault();
     if (addSavedNumber(newSavedName, cleanedDestination)) {
-        setDestination(cleanedDestination); 
-        setIsSavingNew(false);
-        setNewSavedName("");
+      setDestination(cleanedDestination);
+      setIsSavingNew(false);
+      setNewSavedName("");
     }
   };
-  
+
   const currentSavedNumber = savedNumbers.find(n => n.number === cleanedDestination)?.number || "";
 
   const handleRemoveSavedNumber = (id: string) => {
-    const numberToRemove = savedNumbers.find(n => n.id === id)?.number;
-    removeSavedNumber(id);
-    if (destination === numberToRemove) {
+    const numberToRemove = savedNumbers.find(n => n.id === id);
+    if (numberToRemove) {
+      setNumberToDelete(numberToRemove);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const confirmDeleteNumber = () => {
+    if (numberToDelete) {
+      removeSavedNumber(numberToDelete.id);
+      if (destination === numberToDelete.number) {
         setDestination("");
+      }
+      setShowDeleteConfirm(false);
+      setNumberToDelete(null);
     }
   };
 
@@ -168,7 +164,6 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
             </Button>
           )}
         </div>
-        
         <div className="space-y-3 flex-grow">
           {!isVoicemailType && savedNumbers.length > 0 && (
             <div className="space-y-1">
@@ -179,18 +174,17 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {savedNumbers.map((num) => (
-                      <SavedNumberSelectItem 
-                          key={num.id} 
-                          num={num} 
-                          onRemove={handleRemoveSavedNumber} 
-                      />
+                    <SavedNumberSelectItem
+                      key={num.id}
+                      num={num}
+                      onRemove={handleRemoveSavedNumber}
+                    />
                   ))}
                 </SelectContent>
               </Select>
               <Separator className="my-2" />
             </div>
           )}
-
           <div className="space-y-1">
             <Label htmlFor={`dest-${type}`}>Numéro de destination</Label>
             <Input
@@ -203,25 +197,24 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
               readOnly={isVoicemailType}
             />
           </div>
-
           {!isVoicemailType && isSavingNew && isNumberValid && (
-              <Card className="p-3 bg-gray-50 dark:bg-gray-900 border">
-                  <form onSubmit={handleSaveNewNumber} className="space-y-2">
-                      <Label htmlFor={`save-name-${type}`} className="text-xs font-semibold">Nom</Label>
-                      <Input
-                          id={`save-name-${type}`}
-                          value={newSavedName}
-                          onChange={(e) => setNewSavedName(e.target.value)}
-                          required
-                      />
-                      <Button type="submit" size="sm" className="w-full" disabled={!newSavedName.trim()}>
-                          <Plus className="w-4 h-4 mr-2" /> Enregistrer
-                      </Button>
-                  </form>
-              </Card>
+            <Card className="p-3 bg-gray-50 dark:bg-gray-900 border">
+              <form onSubmit={handleSaveNewNumber} className="space-y-2">
+                <Label htmlFor={`save-name-${type}`} className="text-xs font-semibold">Nom</Label>
+                <Input
+                  id={`save-name-${type}`}
+                  value={newSavedName}
+                  onChange={(e) => setNewSavedName(e.target.value)}
+                  required
+                />
+                <Button type="submit" size="sm" className="w-full" disabled={!newSavedName.trim()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Enregistrer
+                </Button>
+              </form>
+            </Card>
           )}
         </div>
-
         <div className="flex space-x-2 pt-4 mt-auto">
           <Button
             type="button"
@@ -235,11 +228,15 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
               <><Save className="w-4 h-4 mr-2" /> {isSubmitting ? "Sauvegarde..." : "Activer"}</>
             )}
           </Button>
-          
           {!isVoicemailType && (
             <>
               {isNumberValid && !savedNumbers.some(n => n.number === cleanedDestination) && !isSavingNew && (
-                <Button type="button" variant="outline" onClick={handleQuickSave} disabled={disabled || isSubmitting}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleQuickSave}
+                  disabled={disabled || isSubmitting}
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               )}
@@ -263,18 +260,39 @@ const ForwardingForm: React.FC<ForwardingFormProps> = ({
               {confirmType === "activate" ? "Confirmer l'activation" : "Confirmer la désactivation"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmType === "activate" 
+              {confirmType === "activate"
                 ? `Voulez-vous vraiment activer le renvoi inconditionnel vers le numéro ${cleanedDestination} ? Tous les appels seront redirigés immédiatement.`
                 : "Voulez-vous vraiment désactiver le renvoi inconditionnel ? Vos appels ne seront plus redirigés."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => executeUpdate(confirmType === "activate" ? cleanedDestination : null)}
               className={confirmType === "activate" ? "bg-primary" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
             >
               Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer le numéro enregistré "{numberToDelete?.name}" ({numberToDelete?.number}) ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteNumber}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
