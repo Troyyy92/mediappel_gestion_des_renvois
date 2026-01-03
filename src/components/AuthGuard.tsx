@@ -12,15 +12,23 @@ const UserMenu: React.FC = () => {
       // Déconnexion Supabase
       await supabase.auth.signOut();
       
-      // Nettoyer complètement le localStorage
-      localStorage.clear();
+      // Nettoyer uniquement les clés Supabase du localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
       
       // Force un rechargement complet vers login
       window.location.href = "/login";
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
       // Même en cas d'erreur, forcer la déconnexion
-      localStorage.clear();
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
       window.location.href = "/login";
     }
   };
