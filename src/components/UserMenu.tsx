@@ -11,15 +11,33 @@ const UserMenu: React.FC = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    console.log("--- Début de la déconnexion ---");
+    console.log("État de l'utilisateur avant signOut:", user ? user.email : "Non connecté");
+    
     try {
       // Tente de déconnecter l'utilisateur
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error; // Lance l'erreur pour être capturée par le bloc catch
+      }
+      
+      console.log("Déconnexion Supabase réussie.");
     } catch (error) {
-      // Ignorer l'erreur si pas de session active (Auth session missing!)
-      console.log("Logout error (ignored):", error);
+      // Loguer l'erreur complète
+      console.error("Erreur de déconnexion Supabase:", error);
+      
+      // Vérification spécifique pour l'erreur de session manquante
+      if (error instanceof Error && error.message.includes("Auth session missing!")) {
+        console.log("Erreur de session manquante détectée. Forçage de la redirection.");
+      } else {
+        console.log("Erreur non critique ignorée pour forcer la redirection.");
+      }
     } finally {
       // Toujours rediriger vers login, même en cas d'erreur ou de succès
+      console.log("Redirection vers /login.");
       navigate("/login");
+      console.log("--- Fin de la déconnexion ---");
     }
   };
 
