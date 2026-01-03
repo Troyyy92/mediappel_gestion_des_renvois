@@ -30,8 +30,17 @@ class OvhApiClient {
   private baseUrl: string;
 
   constructor() {
-    // URL du backend local (sera modifiée pour la production)
-    this.baseUrl = "http://localhost:3001/api";
+    // Détection automatique : app Dyad ou navigateur
+    const isDyadApp = window.location.protocol === 'capacitor:' || 
+                      window.location.protocol === 'ionic:' ||
+                      window.location.hostname === '';
+    
+    // Utilise l'IP locale pour l'app Dyad, localhost pour le navigateur
+    const backendHost = isDyadApp ? '192.168.1.11' : 'localhost';
+    
+    this.baseUrl = `http://${backendHost}:3001/api`;
+    
+    console.log(`🔗 Backend URL: ${this.baseUrl}`);
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
