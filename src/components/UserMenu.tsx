@@ -3,15 +3,19 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/use-auth";
-// import { useNavigate } from "react-router-dom"; // Removed
+import { showError } from "@/utils/toast";
 
 const UserMenu: React.FC = () => {
   const { user } = useAuth();
-  // const navigate = useNavigate(); // Removed
 
   const handleLogout = async () => {
-    // We rely on useAuth and AuthGuard to handle the redirection after sign out
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error("Logout error:", error);
+      showError("Erreur lors de la déconnexion. Veuillez réessayer.");
+    }
+    // AuthGuard will handle redirection if successful
   };
 
   if (!user) {
