@@ -3,29 +3,22 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/use-auth";
-import { showError } from "@/utils/toast";
-import { useNavigate } from "react-router-dom"; // Reintroduced
+import { useNavigate } from "react-router-dom";
+// Removed unused import: import { showError } from "@/utils/toast";
 
 const UserMenu: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate(); // Reintroduced
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error("Logout error:", error);
-      
-      // Si l'erreur est "Auth session missing!", cela signifie que l'utilisateur est déjà déconnecté
-      // ou que le jeton est invalide côté client. Nous forçons la redirection.
-      if (error.message.includes("Auth session missing!")) {
-        navigate("/login");
-        return;
-      }
-      
-      showError("Erreur lors de la déconnexion. Veuillez réessayer.");
-    } else {
-      // Si la déconnexion réussit, nous naviguons explicitement pour garantir la redirection immédiate
+    try {
+      // Tente de déconnecter l'utilisateur
+      await supabase.auth.signOut();
+    } catch (error) {
+      // Ignorer l'erreur si pas de session active (Auth session missing!)
+      console.log("Logout error (ignored):", error);
+    } finally {
+      // Toujours rediriger vers login, même en cas d'erreur ou de succès
       navigate("/login");
     }
   };
