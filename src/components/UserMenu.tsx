@@ -3,41 +3,31 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/use-auth";
-import { useNavigate } from "react-router-dom";
 
 const UserMenu: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const handleLogout = async () => {
     console.log("--- Début de la déconnexion ---");
-    console.log("État de l'utilisateur avant signOut:", user ? user.email : "Non connecté");
+    console.log("État de l'utilisateur avant signOut:", user?.email);
     
     try {
-      // Tente de déconnecter l'utilisateur
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        // Loguer l'erreur mais l'ignorer si elle est liée à une session manquante
-        console.error("Erreur de déconnexion Supabase:", error);
-      } else {
-        console.log("Déconnexion Supabase réussie.");
-      }
+      await supabase.auth.signOut();
+      console.log("SignOut réussi");
     } catch (error) {
-      console.error("Erreur de déconnexion Supabase (catch):", error);
+      console.log("Erreur de déconnexion Supabase:", error);
     } finally {
-      // Ajouter un petit délai pour laisser le temps à useAuth de capter le changement
-      await new Promise(resolve => setTimeout(resolve, 100)); 
+      console.log("Redirection vers /login avec rechargement complet");
       
-      // Toujours rediriger vers login
-      console.log("Redirection vers /login.");
-      navigate("/login");
+      // Force un rechargement complet de l'application (comme dans le navigateur)
+      window.location.href = "/login";
+      
       console.log("--- Fin de la déconnexion ---");
     }
   };
 
   if (!user) {
-    return null; // Ne rien afficher si l'utilisateur n'est pas chargé ou connecté
+    return null;
   }
 
   return (
