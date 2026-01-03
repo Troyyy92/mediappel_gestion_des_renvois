@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/use-auth";
 import { useNavigate } from "react-router-dom";
-// Removed unused import: import { showError } from "@/utils/toast";
 
 const UserMenu: React.FC = () => {
   const { user } = useAuth();
@@ -16,23 +15,11 @@ const UserMenu: React.FC = () => {
     
     try {
       // Tente de déconnecter l'utilisateur
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        throw error; // Lance l'erreur pour être capturée par le bloc catch
-      }
-      
-      console.log("Déconnexion Supabase réussie.");
+      await supabase.auth.signOut();
+      console.log("Déconnexion Supabase réussie (ou session déjà manquante).");
     } catch (error) {
-      // Loguer l'erreur complète
-      console.error("Erreur de déconnexion Supabase:", error);
-      
-      // Vérification spécifique pour l'erreur de session manquante
-      if (error instanceof Error && error.message.includes("Auth session missing!")) {
-        console.log("Erreur de session manquante détectée. Forçage de la redirection.");
-      } else {
-        console.log("Erreur non critique ignorée pour forcer la redirection.");
-      }
+      // Loguer l'erreur mais l'ignorer si elle est liée à une session manquante
+      console.error("Erreur de déconnexion Supabase (ignorée si session manquante):", error);
     } finally {
       // Toujours rediriger vers login, même en cas d'erreur ou de succès
       console.log("Redirection vers /login.");
