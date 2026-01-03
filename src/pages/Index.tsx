@@ -5,6 +5,7 @@ import LineSelector from "@/components/LineSelector";
 import LineInfoCard from "@/components/LineInfoCard";
 import ForwardingForm from "@/components/ForwardingForm";
 import ForwardingHistoryModal from "@/components/ForwardingHistoryModal";
+import UserMenu from "@/components/UserMenu"; // Import du nouveau composant
 import useSipOptions from "@/hooks/use-sip-options";
 import useSavedNumbers from "@/hooks/use-saved-numbers";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,12 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full max-w-4xl mx-auto relative">
+        {/* Positionnement du menu utilisateur en haut à droite */}
+        <div className="absolute top-0 right-0 z-10">
+          <UserMenu />
+        </div>
+        
         <AppHeader />
         
         <LineSelector
