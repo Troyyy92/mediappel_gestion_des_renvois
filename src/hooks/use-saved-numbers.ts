@@ -50,7 +50,7 @@ const useSavedNumbers = () => {
   }, [isAuthLoading, fetchSavedNumbers]);
 
   const addNumber = useCallback(async (name: string, number: string) => {
-    // Nous n'avons plus besoin de vérifier 'user' pour l'accès, mais nous vérifions l'état de connexion
+    // L'utilisateur doit être connecté pour effectuer l'action
     if (!user) {
       showError("Vous devez être connecté pour enregistrer des numéros.");
       return false;
@@ -77,7 +77,8 @@ const useSavedNumbers = () => {
     const newNumberData = {
       name: trimmedName,
       number: cleanedNumber,
-      // Suppression de user_id: user.id
+      // Rétablissement de user_id pour satisfaire les politiques RLS par défaut
+      user_id: user.id, 
     };
 
     const { data, error } = await supabase
