@@ -15,13 +15,21 @@ const UserMenu: React.FC = () => {
     
     try {
       // Tente de déconnecter l'utilisateur
-      await supabase.auth.signOut();
-      console.log("Déconnexion Supabase réussie (ou session déjà manquante).");
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        // Loguer l'erreur mais l'ignorer si elle est liée à une session manquante
+        console.error("Erreur de déconnexion Supabase:", error);
+      } else {
+        console.log("Déconnexion Supabase réussie.");
+      }
     } catch (error) {
-      // Loguer l'erreur mais l'ignorer si elle est liée à une session manquante
-      console.error("Erreur de déconnexion Supabase (ignorée si session manquante):", error);
+      console.error("Erreur de déconnexion Supabase (catch):", error);
     } finally {
-      // Toujours rediriger vers login, même en cas d'erreur ou de succès
+      // Ajouter un petit délai pour laisser le temps à useAuth de capter le changement
+      await new Promise(resolve => setTimeout(resolve, 100)); 
+      
+      // Toujours rediriger vers login
       console.log("Redirection vers /login.");
       navigate("/login");
       console.log("--- Fin de la déconnexion ---");
