@@ -1,5 +1,5 @@
 import React from "react";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,8 @@ const UserMenu: React.FC = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+        <Button variant="ghost" className="relative h-10 px-2 rounded-full flex items-center space-x-2 hover:bg-white/20 transition-colors">
+          <Menu className="h-5 w-5 text-white" />
           <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
             <AvatarFallback>{initial}</AvatarFallback>
           </Avatar>
