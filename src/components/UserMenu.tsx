@@ -3,15 +3,19 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/use-auth";
-import { useNavigate } from "react-router-dom";
 
 const UserMenu: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      await supabase.auth.signOut();
+      
+      // Force un rechargement complet de la page pour nettoyer tous les états
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+    }
   };
 
   if (!user) {
