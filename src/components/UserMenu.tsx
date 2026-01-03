@@ -9,21 +9,38 @@ const UserMenu: React.FC = () => {
 
   const handleLogout = async () => {
     console.log("--- Début de la déconnexion ---");
-    console.log("État de l'utilisateur avant signOut:", user?.email);
     
     try {
+      // 1. Déconnexion Supabase
       await supabase.auth.signOut();
-      console.log("SignOut réussi");
+      console.log("SignOut Supabase réussi");
     } catch (error) {
-      console.log("Erreur de déconnexion Supabase:", error);
-    } finally {
-      console.log("Redirection vers /login avec rechargement complet");
-      
-      // Force un rechargement complet de l'application (comme dans le navigateur)
-      window.location.href = "/login";
-      
-      console.log("--- Fin de la déconnexion ---");
+      console.log("Erreur signOut (ignorée):", error);
     }
+    
+    // 2. Nettoyer TOUTES les données de session
+    try {
+      // Nettoyer le localStorage (sessions Supabase)
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Nettoyer le sessionStorage aussi
+      sessionStorage.clear();
+      
+      console.log("Storage nettoyé");
+    } catch (error) {
+      console.log("Erreur nettoyage storage:", error);
+    }
+    
+    // 3. Force un rechargement complet
+    console.log("Rechargement vers /login");
+    window.location.href = "/login";
   };
 
   if (!user) {
