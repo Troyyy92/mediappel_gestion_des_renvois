@@ -4,12 +4,12 @@ import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "./use-auth";
 
-// Type pour les données Supabase (inclut user_id)
+// Type pour les données Supabase (user_id n'est plus utilisé dans le code, mais peut rester dans la DB)
 interface SavedNumberDB {
   id: string;
   name: string;
   number: string;
-  user_id: string;
+  user_id?: string; // Rendu optionnel
 }
 
 const useSavedNumbers = () => {
@@ -18,12 +18,10 @@ const useSavedNumbers = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchSavedNumbers = useCallback(async () => {
-    if (!user) {
-      setSavedNumbers([]);
-      setIsLoading(false);
-      return;
-    }
+    // Nous n'avons plus besoin de vérifier 'user' ici si nous voulons que ce soit global
     setIsLoading(true);
+    
+    // Suppression du filtre par user_id
     const { data, error } = await supabase
       .from('saved_numbers')
       .select('id, name, number')
@@ -42,19 +40,22 @@ const useSavedNumbers = () => {
       setSavedNumbers(numbers);
     }
     setIsLoading(false);
-  }, [user]);
+  }, []);
 
   useEffect(() => {
+    // Nous attendons toujours que l'authentification soit chargée pour commencer
     if (!isAuthLoading) {
       fetchSavedNumbers();
     }
   }, [isAuthLoading, fetchSavedNumbers]);
 
   const addNumber = useCallback(async (name: string, number: string) => {
+    // Nous n'avons plus besoin de vérifier 'user' pour l'accès, mais nous vérifions l'état de connexion
     if (!user) {
       showError("Vous devez être connecté pour enregistrer des numéros.");
       return false;
     }
+    
     const cleanedNumber = number.trim().replace(/[^0-9+]/g, "");
     const trimmedName = name.trim();
 
@@ -76,7 +77,7 @@ const useSavedNumbers = () => {
     const newNumberData = {
       name: trimmedName,
       number: cleanedNumber,
-      user_id: user.id,
+      // Suppression de user_id: user.id
     };
 
     const { data, error } = await supabase
